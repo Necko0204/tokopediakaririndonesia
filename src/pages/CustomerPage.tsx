@@ -21,7 +21,25 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
 
   const currentMember = state.members[0];
   const featuredProduct = state.products[0];
-  const assignedOrder = state.orders.find((order) => order.member === currentMember.username && order.status === "assigned");
+  const assignedOrder = currentMember ? state.orders.find((order) => order.member === currentMember.username && order.status === "assigned") : undefined;
+
+  // Show empty state if no data
+  if (!currentMember || state.members.length === 0) {
+    return (
+      <main className="min-h-screen bg-[#f4f6f5] pb-24 text-ink flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-3xl font-bold mb-4">No Data Available</h1>
+          <p className="text-gray-600 mb-6">Please seed Firestore with sample data to continue.</p>
+          <button
+            onClick={() => navigate("/admin")}
+            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Go to Admin Panel
+          </button>
+        </div>
+      </main>
+    );
+  }
 
   const filteredProducts = useMemo(
     () => state.products.filter((product) => `${product.name} ${product.code} ${product.category}`.toLowerCase().includes(query.toLowerCase())),
