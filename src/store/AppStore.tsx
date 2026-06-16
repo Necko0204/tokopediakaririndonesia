@@ -1,6 +1,12 @@
 import { createContext, useContext, useEffect, useMemo, useReducer, useState } from "react";
 import { firebaseReady } from "../firebase";
 import { loadStoredState, saveStoredState } from "../services/appStateRepository";
+import * as adminsService from "../services/adminsService";
+import * as membersService from "../services/membersService";
+import * as productsService from "../services/productsService";
+import * as ordersService from "../services/ordersService";
+import * as transactionsService from "../services/transactionsService";
+import * as settingsService from "../services/settingsService";
 import type { AppState, BankPlacement, Member, Product, Transaction } from "../types";
 
 type Action =
@@ -159,6 +165,109 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (ready) void saveStoredState(state);
   }, [ready, state]);
+
+  // Sync products to Firestore when they change
+  useEffect(() => {
+    if (!ready || !firebaseReady) return;
+
+    const syncProductsToFirebase = async () => {
+      try {
+        for (const product of state.products) {
+          const existing = await productsService.getProductById(product.id);
+          if (!existing) {
+            await productsService.createProduct(product);
+          } else {
+            await productsService.updateProduct(product.id, product);
+          }
+        }
+      } catch (error) {
+        console.error("Error syncing products to Firebase:", error);
+      }
+    };
+
+    syncProductsToFirebase();
+  }, [state.products, ready]);
+
+  // Sync members to Firestore when they change
+  useEffect(() => {
+    if (!ready || !firebaseReady) return;
+
+    const syncMembersToFirebase = async () => {
+      try {
+        for (const member of state.members) {
+          const existing = await membersService.getMemberById(member.id);
+          if (!existing) {
+            await membersService.createMember(member);
+          } else {
+            await membersService.updateMember(member.id, member);
+          }
+        }
+      } catch (error) {
+        console.error("Error syncing members to Firebase:", error);
+      }
+    };
+
+    syncMembersToFirebase();
+  }, [state.members, ready]);
+
+  // Sync orders to Firestore when they change
+  useEffect(() => {
+    if (!ready || !firebaseReady) return;
+
+    const syncOrdersToFirebase = async () => {
+      try {
+        for (const order of state.orders) {
+          const existing = await ordersService.getOrderById(order.id);
+          if (!existing) {
+            await ordersService.createOrder(order);
+          } else {
+            await ordersService.updateOrder(order.id, order);
+          }
+        }
+      } catch (error) {
+        console.error("Error syncing orders to Firebase:", error);
+      }
+    };
+
+    syncOrdersToFirebase();
+  }, [state.orders, ready]);
+
+  // Sync transactions to Firestore when they change
+  useEffect(() => {
+    if (!ready || !firebaseReady) return;
+
+    const syncTransactionsToFirebase = async () => {
+      try {
+        for (const transaction of state.transactions) {
+          const existing = await transactionsService.getTransactionById(transaction.id);
+          if (!existing) {
+            await transactionsService.createTransaction(transaction);
+          } else {
+            await transactionsService.updateTransaction(transaction.id, transaction);
+          }
+        }
+      } catch (error) {
+        console.error("Error syncing transactions to Firebase:", error);
+      }
+    };
+
+    syncTransactionsToFirebase();
+  }, [state.transactions, ready]);
+
+  // Sync settings to Firestore when they change
+  useEffect(() => {
+    if (!ready || !firebaseReady) return;
+
+    const syncSettingsToFirebase = async () => {
+      try {
+        await settingsService.updateSettings(state.account);
+      } catch (error) {
+        console.error("Error syncing settings to Firebase:", error);
+      }
+    };
+
+    syncSettingsToFirebase();
+  }, [state.account, ready]);
 
   const value = useMemo(
     () => ({
