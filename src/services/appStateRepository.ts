@@ -1,40 +1,52 @@
-import { initialState } from "../data";
 import type { AppState } from "../types";
-import * as adminsService from "./adminsService";
-import * as membersService from "./membersService";
-import * as productsService from "./productsService";
-import * as banksService from "./banksService";
-import * as transactionsService from "./transactionsService";
-import * as ordersService from "./ordersService";
-import * as settingsService from "./settingsService";
 
 const storageKey = "orderops-app-state";
+
+// Empty initial state - all data comes from Firestore
+const emptyState: AppState = {
+  admins: [],
+  members: [],
+  products: [],
+  banks: [],
+  transactions: [],
+  orders: [],
+  account: {
+    username: "",
+    password: "",
+    withdrawalPassword: "",
+  },
+};
 
 export async function loadStoredState(): Promise<AppState> {
   try {
     // Try to load from Firestore collections
+    const { getAdmins } = await import("./adminsService");
+    const { getMembers } = await import("./membersService");
+    const { getProducts } = await import("./productsService");
+    const { getBanks } = await import("./banksService");
+    const { getTransactions } = await import("./transactionsService");
+    const { getOrders } = await import("./ordersService");
+    const { getSettings } = await import("./settingsService");
+
     const [admins, members, products, banks, transactions, orders, settings] = await Promise.all([
-      adminsService.getAdmins(),
-      membersService.getMembers(),
-      productsService.getProducts(),
-      banksService.getBanks(),
-      transactionsService.getTransactions(),
-      ordersService.getOrders(),
-      settingsService.getSettings(),
+      getAdmins(),
+      getMembers(),
+      getProducts(),
+      getBanks(),
+      getTransactions(),
+      getOrders(),
+      getSettings(),
     ]);
 
-    // If we got data from Firebase, use it
-    if (admins.length > 0 || members.length > 0 || products.length > 0) {
-      return {
-        admins,
-        members,
-        products,
-        banks,
-        transactions,
-        orders,
-        account: settings || initialState.account,
-      };
-    }
+    return {
+      admins,
+      members,
+      products,
+      banks,
+      transactions,
+      orders,
+      account: settings || emptyState.account,
+    };
   } catch (error) {
     console.error("Error loading from Firestore:", error);
   }
@@ -45,8 +57,8 @@ export async function loadStoredState(): Promise<AppState> {
     return JSON.parse(stored) as AppState;
   }
 
-  // Fallback to initial state
-  return initialState;
+  // Return empty state (database-first approach)
+  return emptyState;
 }
 
 export async function saveStoredState(state: AppState) {

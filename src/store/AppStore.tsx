@@ -1,5 +1,4 @@
 import { createContext, useContext, useEffect, useMemo, useReducer, useState } from "react";
-import { initialState } from "../data";
 import { firebaseReady } from "../firebase";
 import { loadStoredState, saveStoredState } from "../services/appStateRepository";
 import * as adminsService from "../services/adminsService";
@@ -137,7 +136,15 @@ function reducer(state: AppState, action: Action): AppState {
 }
 
 export function AppStoreProvider({ children }: { children: React.ReactNode }) {
-  const [state, dispatch] = useReducer(reducer, initialState);
+  const [state, dispatch] = useReducer(reducer, {
+    admins: [],
+    members: [],
+    products: [],
+    banks: [],
+    transactions: [],
+    orders: [],
+    account: { username: "", password: "", withdrawalPassword: "" },
+  });
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
