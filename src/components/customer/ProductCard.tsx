@@ -1,0 +1,37 @@
+import { Heart } from "lucide-react";
+import type { Product } from "../../types";
+import { formatRupiah } from "../../utils";
+
+interface ProductCardProps {
+  product: Product;
+  isFavorite: boolean;
+  onToggleFavorite: () => void;
+  onTakeOrder: () => void;
+}
+
+export default function ProductCard({ product, isFavorite, onToggleFavorite, onTakeOrder }: ProductCardProps) {
+  return (
+    <article className="overflow-hidden rounded bg-white shadow-panel">
+      <img className="h-40 w-full object-cover" src={product.image} alt={product.name} />
+      <div className="p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-bold uppercase text-forest">{product.code}</p>
+            <h3 className="mt-1 min-h-12 font-bold">{product.name}</h3>
+          </div>
+          <button className={`grid h-9 w-9 place-items-center rounded-full ${isFavorite ? "bg-coral text-white" : "bg-rose-50 text-coral"}`} aria-label="Favorite" onClick={onToggleFavorite}>
+            <Heart size={17} />
+          </button>
+        </div>
+        <p className="mt-3 text-lg font-black">{formatRupiah(product.price)}</p>
+        <p className="text-sm text-emerald-700">Commission {formatRupiah(product.commission)}</p>
+        <div className="mt-4 flex items-center justify-between">
+          <span className="rounded bg-slate-100 px-2 py-1 text-xs font-bold text-slate-600">{product.quantity} available</span>
+          <button className="rounded bg-forest px-3 py-2 text-sm font-bold text-white disabled:bg-slate-300" disabled={product.quantity <= 0} onClick={onTakeOrder}>
+            Take order
+          </button>
+        </div>
+      </div>
+    </article>
+  );
+}

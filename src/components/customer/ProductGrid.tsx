@@ -1,0 +1,34 @@
+import type { Product } from "../../types";
+import ProductCard from "./ProductCard";
+
+interface ProductGridProps {
+  products: Product[];
+  favorites: string[];
+  onClearSearch: () => void;
+  onToggleFavorite: (productId: string) => void;
+  onTakeOrder: (product: Product) => void;
+}
+
+export default function ProductGrid({ products, favorites, onClearSearch, onToggleFavorite, onTakeOrder }: ProductGridProps) {
+  return (
+    <section id="products">
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="text-xl font-black">Recommended products</h2>
+        <button className="text-sm font-bold text-forest" onClick={onClearSearch}>
+          See all
+        </button>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        {products.map((product) => (
+          <ProductCard
+            key={product.id}
+            product={product}
+            isFavorite={favorites.includes(product.id)}
+            onToggleFavorite={() => onToggleFavorite(product.id)}
+            onTakeOrder={() => onTakeOrder(product)}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
