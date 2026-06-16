@@ -9,9 +9,18 @@ import * as transactionsService from "../services/transactionsService";
 import * as settingsService from "../services/settingsService";
 import type { AppState, BankPlacement, Member, Product, Transaction } from "../types";
 
+type RegisterMemberPayload = {
+  username: string;
+  email: string;
+  phone: string;
+  invitationCode: string;
+  accountPassword: string;
+  withdrawalPassword: string;
+};
+
 type Action =
   | { type: "hydrate"; payload: AppState }
-  | { type: "registerMember"; payload: Omit<Member, "id" | "level" | "balance" | "totalOrders" | "lastLogin" | "referredBy"> }
+  | { type: "registerMember"; payload: RegisterMemberPayload }
   | { type: "createTransaction"; payload: Pick<Transaction, "member" | "type" | "amount"> }
   | { type: "updateTransaction"; payload: { id: string; status: "approved" | "rejected" } }
   | { type: "createOrder"; payload: { member: string; productId: string } }
@@ -43,13 +52,18 @@ function reducer(state: AppState, action: Action): AppState {
   if (action.type === "registerMember") {
     const admin = state.admins.find((item) => item.code === action.payload.invitationCode) ?? state.admins[0];
     const member: Member = {
-      ...action.payload,
       id: String(Date.now()).slice(-6),
+      username: action.payload.username,
+      email: action.payload.email,
+      phone: action.payload.phone,
+      invitationCode: action.payload.invitationCode,
       referredBy: admin.name,
       level: "Starter",
       balance: 0,
       totalOrders: 0,
       lastLogin: nowStamp(),
+      accountPassword: action.payload.accountPassword,
+      withdrawalPassword: action.payload.withdrawalPassword,
     };
 
     return {
