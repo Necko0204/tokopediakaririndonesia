@@ -23,6 +23,19 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
   const featuredProduct = state.products[0];
   const assignedOrder = currentMember ? state.orders.find((order) => order.member === currentMember.username && order.status === "assigned") : undefined;
 
+  const filteredProducts = useMemo(
+    () => state.products.filter((product) => `${product.name} ${product.code} ${product.category}`.toLowerCase().includes(query.toLowerCase())),
+    [query, state.products],
+  );
+
+  const toggleFavorite = (productId: string) => {
+    setFavorites((items) => (items.includes(productId) ? items.filter((id) => id !== productId) : [...items, productId]));
+  };
+
+  const takeOrder = (product: Product) => {
+    dispatch({ type: "createOrder", payload: { member: currentMember!.username, productId: product.id } });
+  };
+
   // Show empty state if no data
   if (!currentMember || state.members.length === 0) {
     return (
@@ -40,19 +53,6 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
       </main>
     );
   }
-
-  const filteredProducts = useMemo(
-    () => state.products.filter((product) => `${product.name} ${product.code} ${product.category}`.toLowerCase().includes(query.toLowerCase())),
-    [query, state.products],
-  );
-
-  const toggleFavorite = (productId: string) => {
-    setFavorites((items) => (items.includes(productId) ? items.filter((id) => id !== productId) : [...items, productId]));
-  };
-
-  const takeOrder = (product: Product) => {
-    dispatch({ type: "createOrder", payload: { member: currentMember.username, productId: product.id } });
-  };
 
   return (
     <main className="min-h-screen bg-[#f4f6f5] pb-24 text-ink">
