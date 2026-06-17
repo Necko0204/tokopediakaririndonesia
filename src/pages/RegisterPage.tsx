@@ -8,22 +8,16 @@ function generateOTP(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
+const API_URL = "http://localhost:3001";
+
 async function sendOTPEmail(email: string, otp: string): Promise<boolean> {
   try {
-    const apiKey = import.meta.env.VITE_RESEND_API_KEY;
-    if (!apiKey) {
-      console.error("Resend API key not configured");
-      return false;
-    }
-
-    const response = await fetch("https://api.resend.com/emails", {
+    const response = await fetch(`${API_URL}/api/send-email`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        from: "onboarding@resend.dev",
         to: email,
         subject: "Your OTP for Account Registration",
         html: `
@@ -38,7 +32,7 @@ async function sendOTPEmail(email: string, otp: string): Promise<boolean> {
 
     const data = await response.json();
     if (!response.ok) {
-      console.error("Resend API error:", data);
+      console.error("Email sending error:", data);
       return false;
     }
     return true;
@@ -50,20 +44,12 @@ async function sendOTPEmail(email: string, otp: string): Promise<boolean> {
 
 async function sendInvitationCode(email: string, invitationCode: string): Promise<boolean> {
   try {
-    const apiKey = import.meta.env.VITE_RESEND_API_KEY;
-    if (!apiKey) {
-      console.error("Resend API key not configured");
-      return false;
-    }
-
-    const response = await fetch("https://api.resend.com/emails", {
+    const response = await fetch(`${API_URL}/api/send-email`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        from: "onboarding@resend.dev",
         to: email,
         subject: "Your Invitation Code - Tokopedia Kari Indonesia",
         html: `
@@ -78,7 +64,7 @@ async function sendInvitationCode(email: string, invitationCode: string): Promis
 
     const data = await response.json();
     if (!response.ok) {
-      console.error("Resend API error:", data);
+      console.error("Email sending error:", data);
       return false;
     }
     return true;
@@ -119,7 +105,7 @@ export default function RegisterPage({ navigate }: { navigate: Navigate }) {
     if (sent) {
       setMessage("✓ Invitation code sent to your email!");
     } else {
-      setMessage("✗ Failed to send. Check console for errors.");
+      setMessage("✗ Failed to send. Make sure the server is running (npm run server)");
     }
   };
 
@@ -135,7 +121,7 @@ export default function RegisterPage({ navigate }: { navigate: Navigate }) {
       setMessage("✓ OTP sent! Check your email.");
       setStep("otp");
     } else {
-      setMessage("✗ Failed to send OTP. Check console for errors.");
+      setMessage("✗ Failed to send OTP. Make sure the server is running (npm run server)");
     }
   };
 
