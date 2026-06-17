@@ -1,4 +1,4 @@
-import { Store } from "lucide-react";
+import { Store, Send } from "lucide-react";
 import { useState } from "react";
 import type { Navigate } from "../App";
 import { Field, inputClass } from "../components/common";
@@ -36,6 +36,34 @@ async function sendOTPEmail(email: string, otp: string): Promise<boolean> {
   }
 }
 
+async function sendInvitationCode(email: string, invitationCode: string): Promise<boolean> {
+  try {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${import.meta.env.VITE_RESEND_API_KEY}`,
+      },
+      body: JSON.stringify({
+        from: "noreply@tokopediakaririndonesia.com",
+        to: email,
+        subject: "Your Invitation Code - Tokopedia Kari Indonesia",
+        html: `
+          <h2>Welcome to Tokopedia Kari Indonesia</h2>
+          <p>Your invitation code is:</p>
+          <h1 style="color: #2d5016; font-size: 32px; letter-spacing: 2px; font-family: monospace;">${invitationCode}</h1>
+          <p>Use this code during registration to connect your account to the correct admin team.</p>
+          <p><strong>Keep this code safe and don't share it with anyone.</strong></p>
+        `,
+      }),
+    });
+    return response.ok;
+  } catch (error) {
+    console.error("Error sending invitation code:", error);
+    return false;
+  }
+}
+
 export default function RegisterPage({ navigate }: { navigate: Navigate }) {
   const { dispatch } = useAppStore();
   const code = new URLSearchParams(window.location.search).get("code") ?? "346192";
@@ -51,6 +79,25 @@ export default function RegisterPage({ navigate }: { navigate: Navigate }) {
   const [otp, setOtp] = useState("");
   const [sentOtp, setSentOtp] = useState("");
   const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSendInvitationCode = async () => {
+    if (!form.email.trim()) {
+      setMessage("Please enter your email first");
+      return;
+    }
+
+    setLoading(true);
+    setMessage("Sending invitation code...");
+    const sent = await sendInvitationCode(form.email, form.invitationCode);
+    setLoading(false);
+
+    if (sent) {
+      setMessage("Invitation code sent to your email!");
+    } else {
+      setMessage("Failed to send invitation code. Please try again.");
+    }
+  };
 
   const handleSubmitForm = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -114,13 +161,24 @@ export default function RegisterPage({ navigate }: { navigate: Navigate }) {
               />
             </Field>
             <Field label="Email">
-              <input
-                className={inputClass}
-                type="email"
-                required
-                value={form.email}
-                onChange={(event) => setForm({ ...form, email: event.target.value })}
-              />
+              <div className="flex gap-2">
+                <input
+                  className={`${inputClass} flex-1`}
+                  type="email"
+                  required
+                  value={form.email}
+                  onChange={(event) => setForm({ ...form, email: event.target.value })}
+                />
+                <button
+                  type="button"
+                  onClick={handleSendInvitationCode}
+                  disabled={loading}
+                  className="rounded bg-forest px-3 py-2 text-white hover:bg-forest/90 disabled:bg-slate-400 flex items-center gap-1"
+                  title="Send invitation code to this email"
+                >
+                  <Send size={16} />
+                </button>
+              </div>
             </Field>
             <Field label="Phone number">
               <input
@@ -156,8 +214,16 @@ export default function RegisterPage({ navigate }: { navigate: Navigate }) {
                 onChange={(event) => setForm({ ...form, withdrawalPassword: event.target.value })}
               />
             </Field>
-            {message && <p className="rounded bg-emerald-50 p-3 text-sm font-semibold text-emerald-700">{message}</p>}
-            <button className="h-12 w-full rounded bg-forest font-bold text-white">Send OTP</button>
+            {message && (
+              <p
+                className={`rounded p-3 text-sm font-semibold ${
+                  message.includes("Failed") ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-700"
+                }`}
+              >
+                {message}
+              </p>
+            )}
+            <button className="h-12 w-full rounded bg-forest font-bold text-white hover:bg-forest/90">Send OTP</button>
           </form>
         ) : (
           <form className="mt-6 grid gap-3" onSubmit={handleVerifyOTP}>
@@ -180,7 +246,7 @@ export default function RegisterPage({ navigate }: { navigate: Navigate }) {
                 {message}
               </p>
             )}
-            <button className="h-12 w-full rounded bg-forest font-bold text-white">Verify OTP</button>
+            <button className="h-12 w-full rounded bg-forest font-bold text-white hover:bg-forest/90">Verify OTP</button>
             <button
               type="button"
               onClick={() => {
@@ -188,7 +254,7 @@ export default function RegisterPage({ navigate }: { navigate: Navigate }) {
                 setOtp("");
                 setMessage("");
               }}
-              className="h-10 w-full rounded border-2 border-forest font-bold text-forest"
+              className="h-10 w-full rounded border-2 border-forest font-bold text-forest hover:bg-forest/10"
             >
               Back
             </button>
