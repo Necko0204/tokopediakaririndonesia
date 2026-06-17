@@ -1,20 +1,32 @@
 import express from "express";
 import cors from "cors";
-import { Resend } from "resend";
+import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 
 dotenv.config({ path: ".env.local" });
 
 const app = express();
 
-// Check if API key exists
-const apiKey = process.env.VITE_RESEND_API_KEY;
-if (!apiKey) {
-  console.error("❌ Error: VITE_RESEND_API_KEY not found in .env.local");
+// Gmail SMTP configuration
+const gmailEmail = process.env.GMAIL_EMAIL;
+const gmailPassword = process.env.GMAIL_APP_PASSWORD;
+
+if (!gmailEmail || !gmailPassword) {
+  console.error("❌ Error: GMAIL_EMAIL or GMAIL_APP_PASSWORD not found in .env.local");
+  console.error("Add these to .env.local:");
+  console.error("GMAIL_EMAIL=your_email@gmail.com");
+  console.error("GMAIL_APP_PASSWORD=your_16_char_app_password");
   process.exit(1);
 }
 
-const resend = new Resend(apiKey);
+// Create Nodemailer transporter
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: gmailEmail,
+    pass: gmailPassword,
+  },
+});
 
 app.use(express.json());
 app.use(cors());
@@ -29,29 +41,26 @@ app.post("/api/send-email", async (req, res) => {
 
     console.log(`📧 Sending email to: ${to}`);
     
-    const response = await resend.emails.send({
-      from: "onboarding@resend.dev",
+    const mailOptions = {
+      from: gmailEmail,
       to: to,
       subject: subject,
       html: html,
-    });
+    };
 
-    if (response.error) {
-      console.error("❌ Resend error:", response.error);
-      return res.status(400).json({ error: response.error.message });
-    }
+    const info = await transporter.sendMail(mailOptions);
 
-    console.log(`✓ Email sent successfully to ${to}. ID: ${response.data.id}`);
-    res.json({ success: true, id: response.data.id });
+    console.log(`✓ Email sent successfully. ID: ${info.messageId}`);
+    res.json({ success: true, id: info.messageId });
   } catch (error) {
-    console.error("❌ Email sending error:", error);
-    res.status(500).json({ error: "Failed to send email" });
+    console.error("❌ Email sending error:", error.message);
+    res.status(500).json({ error: error.message || "Failed to send email" });
   }
 });
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`✓ Email server running on http://localhost:${PORT}`);
-  console.log(`✓ API key loaded`);
-  console.log(`📝 Add test emails at: https://resend.com/settings`);
+  console.log(`✓ Gmail configured: ${gmailEmail}`);
+  console.log(`✓ Ready to send emails!`);
 });

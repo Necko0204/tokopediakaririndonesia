@@ -57,3 +57,8 @@
 [2m8:26:40 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2m.git-rewrite/t/dist/index.html[22m
 [2m4:38:22 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/styles.css, /src/pages/RegisterPage.tsx[22m
 [2m4:40:00 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/styles.css, /src/pages/RegisterPage.tsx[22m
+[2m7:16:34 AM[22m [36m[1m[vite][22m[39m [32m.env.local changed, restarting server...[39m
+[2m7:16:34 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m Re-optimizing dependencies because lockfile has changed
+[2m7:16:34 AM[22m [36m[1m[vite][22m[39m server restarted.
+[2m7:36:52 AM[22m [36m[1m[vite][22m[39m [32m.env.local changed, restarting server...[39m
+[2m7:36:52 AM[22m [36m[1m[vite][22m[39m server restarted.
