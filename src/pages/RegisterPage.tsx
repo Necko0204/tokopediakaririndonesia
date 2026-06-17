@@ -10,14 +10,20 @@ function generateOTP(): string {
 
 async function sendOTPEmail(email: string, otp: string): Promise<boolean> {
   try {
+    const apiKey = import.meta.env.VITE_RESEND_API_KEY;
+    if (!apiKey) {
+      console.error("Resend API key not configured");
+      return false;
+    }
+
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${import.meta.env.VITE_RESEND_API_KEY}`,
+        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        from: "noreply@tokopediakaririndonesia.com",
+        from: "onboarding@resend.dev",
         to: email,
         subject: "Your OTP for Account Registration",
         html: `
@@ -29,7 +35,13 @@ async function sendOTPEmail(email: string, otp: string): Promise<boolean> {
         `,
       }),
     });
-    return response.ok;
+
+    const data = await response.json();
+    if (!response.ok) {
+      console.error("Resend API error:", data);
+      return false;
+    }
+    return true;
   } catch (error) {
     console.error("Error sending OTP:", error);
     return false;
@@ -38,14 +50,20 @@ async function sendOTPEmail(email: string, otp: string): Promise<boolean> {
 
 async function sendInvitationCode(email: string, invitationCode: string): Promise<boolean> {
   try {
+    const apiKey = import.meta.env.VITE_RESEND_API_KEY;
+    if (!apiKey) {
+      console.error("Resend API key not configured");
+      return false;
+    }
+
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${import.meta.env.VITE_RESEND_API_KEY}`,
+        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        from: "noreply@tokopediakaririndonesia.com",
+        from: "onboarding@resend.dev",
         to: email,
         subject: "Your Invitation Code - Tokopedia Kari Indonesia",
         html: `
@@ -57,7 +75,13 @@ async function sendInvitationCode(email: string, invitationCode: string): Promis
         `,
       }),
     });
-    return response.ok;
+
+    const data = await response.json();
+    if (!response.ok) {
+      console.error("Resend API error:", data);
+      return false;
+    }
+    return true;
   } catch (error) {
     console.error("Error sending invitation code:", error);
     return false;
@@ -93,9 +117,9 @@ export default function RegisterPage({ navigate }: { navigate: Navigate }) {
     setLoading(false);
 
     if (sent) {
-      setMessage("Invitation code sent to your email!");
+      setMessage("✓ Invitation code sent to your email!");
     } else {
-      setMessage("Failed to send invitation code. Please try again.");
+      setMessage("✗ Failed to send. Check console for errors.");
     }
   };
 
@@ -108,10 +132,10 @@ export default function RegisterPage({ navigate }: { navigate: Navigate }) {
     const sent = await sendOTPEmail(form.email, generatedOtp);
 
     if (sent) {
-      setMessage("OTP sent! Check your email.");
+      setMessage("✓ OTP sent! Check your email.");
       setStep("otp");
     } else {
-      setMessage("Failed to send OTP. Please try again.");
+      setMessage("✗ Failed to send OTP. Check console for errors.");
     }
   };
 
@@ -129,10 +153,10 @@ export default function RegisterPage({ navigate }: { navigate: Navigate }) {
           withdrawalPassword: form.withdrawalPassword,
         },
       });
-      setMessage("Account registered! Redirecting to store...");
+      setMessage("✓ Account registered! Redirecting to store...");
       setTimeout(() => navigate("/"), 2000);
     } else {
-      setMessage("Invalid OTP. Please try again.");
+      setMessage("✗ Invalid OTP. Please try again.");
     }
   };
 
@@ -217,7 +241,7 @@ export default function RegisterPage({ navigate }: { navigate: Navigate }) {
             {message && (
               <p
                 className={`rounded p-3 text-sm font-semibold ${
-                  message.includes("Failed") ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-700"
+                  message.includes("✗") ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-700"
                 }`}
               >
                 {message}
@@ -240,7 +264,7 @@ export default function RegisterPage({ navigate }: { navigate: Navigate }) {
             {message && (
               <p
                 className={`rounded p-3 text-sm font-semibold ${
-                  message.includes("Invalid") ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-700"
+                  message.includes("✗") ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-700"
                 }`}
               >
                 {message}

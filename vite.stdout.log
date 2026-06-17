@@ -49,3 +49,10 @@
 [2m8:17:40 AM[22m [36m[1m[vite][22m[39m [32m.env changed, restarting server...[39m
 [2m8:17:41 AM[22m [36m[1m[vite][22m[39m server restarted.
 [2m8:19:28 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/styles.css, /src/pages/RegisterPage.tsx[22m
+[2m8:26:40 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2m.git-rewrite/t/index.html[22m
+[2m8:26:40 AM[22m [36m[1m[vite][22m[39m changed tsconfig file detected: C:/Users/Admin/Documents/tokopediakaririndonesia/.git-rewrite/t/tsconfig.json - Clearing cache and forcing full-reload to ensure TypeScript is compiled with updated config values.
+[2m8:26:40 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2m.git-rewrite/t/dist/index.html[22m
+[2m8:26:40 AM[22m [36m[1m[vite][22m[39m changed tsconfig file detected: C:/Users/Admin/Documents/tokopediakaririndonesia/.git-rewrite/t/tsconfig.json - Clearing cache and forcing full-reload to ensure TypeScript is compiled with updated config values.
+[2m8:26:40 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2m.git-rewrite/t/index.html[22m
+[2m8:26:40 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2m.git-rewrite/t/dist/index.html[22m
+[2m4:38:22 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/styles.css, /src/pages/RegisterPage.tsx[22m
