@@ -1,8 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Navigate } from "../App";
 import AssignmentPanel from "../components/customer/AssignmentPanel";
 import BottomNavbar from "../components/customer/BottomNavbar";
-import CustomerHeader from "../components/customer/CustomerHeader";
+import CustomerHeader, { type CustomerNotification } from "../components/customer/CustomerHeader";
 import CustomerHero from "../components/customer/CustomerHero";
 import DepositDestination from "../components/customer/DepositDestination";
 import PremiumBanner from "../components/customer/PremiumBanner";
@@ -10,6 +10,7 @@ import ProductGrid from "../components/customer/ProductGrid";
 import RecentRecords from "../components/customer/RecentRecords";
 import StoreShortcutGrid from "../components/customer/StoreShortcutGrid";
 import TransactionModal from "../components/customer/TransactionModal";
+import { clearActiveCustomerId, getActiveCustomerId } from "../services/customerSession";
 import { useAppStore } from "../store/AppStore";
 import type { Product } from "../types";
 
@@ -18,10 +19,48 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
   const [query, setQuery] = useState("");
   const [favorites, setFavorites] = useState<string[]>([]);
   const [activeModal, setActiveModal] = useState<"topup" | "withdraw" | null>(null);
+  const [activeCustomerId, setActiveCustomerIdState] = useState(() => getActiveCustomerId());
 
-  const currentMember = state.members[0];
+  useEffect(() => {
+    setActiveCustomerIdState(getActiveCustomerId());
+  }, [state.members]);
+
+  const currentMember = state.members.find((member) => member.id === activeCustomerId) ?? state.members[0];
   const featuredProduct = state.products[0];
   const assignedOrder = currentMember ? state.orders.find((order) => order.member === currentMember.username && order.status === "assigned") : undefined;
+  const notifications = useMemo<CustomerNotification[]>(() => {
+    if (!currentMember) return [];
+
+    const orderNotifications = state.orders
+      .filter((order) => order.member === currentMember.username && order.status !== "completed")
+      .slice(0, 3)
+      .map((order) => ({
+        id: `order-${order.id}`,
+        title: order.status === "assigned" ? "Order ready to complete" : "Order is frozen",
+        text: `${order.productName} · ${order.productCode}`,
+        tone: order.status === "frozen" ? ("danger" as const) : ("info" as const),
+      }));
+
+    const transactionNotifications = state.transactions
+      .filter((transaction) => transaction.member === currentMember.username)
+      .slice(0, 4)
+      .map((transaction) => ({
+        id: `transaction-${transaction.id}`,
+        title:
+          transaction.status === "pending"
+            ? `${transaction.type === "topup" ? "Top-up" : "Withdrawal"} pending`
+            : `${transaction.type === "topup" ? "Top-up" : "Withdrawal"} ${transaction.status}`,
+        text: `${transaction.amount.toLocaleString("id-ID")} IDR · ${transaction.createdAt}`,
+        tone:
+          transaction.status === "approved"
+            ? ("success" as const)
+            : transaction.status === "rejected"
+              ? ("danger" as const)
+              : ("warning" as const),
+      }));
+
+    return [...orderNotifications, ...transactionNotifications].slice(0, 6);
+  }, [currentMember, state.orders, state.transactions]);
 
   const filteredProducts = useMemo(
     () => state.products.filter((product) => `${product.name} ${product.code} ${product.category}`.toLowerCase().includes(query.toLowerCase())),
@@ -34,6 +73,12 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
 
   const takeOrder = (product: Product) => {
     dispatch({ type: "createOrder", payload: { member: currentMember!.username, productId: product.id } });
+  };
+
+  const logout = () => {
+    clearActiveCustomerId();
+    setActiveCustomerIdState(null);
+    navigate("/login");
   };
 
   // Show empty state if no data
@@ -56,11 +101,17 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
 
   return (
     <main className="min-h-screen bg-[#f4f6f5] pb-24 text-ink">
-      <CustomerHeader query={query} onQueryChange={setQuery} navigate={navigate} />
+      <CustomerHeader
+        query={query}
+        activeUsername={activeCustomerId ? currentMember.username : undefined}
+        notifications={notifications}
+        onQueryChange={setQuery}
+        onLogout={logout}
+        navigate={navigate}
+      />
       <CustomerHero
         balance={currentMember.balance}
         persistence={persistence}
-        navigate={navigate}
         onTopUp={() => setActiveModal("topup")}
         onWithdraw={() => setActiveModal("withdraw")}
       />
@@ -85,7 +136,7 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
         </div>
       </section>
 
-      <BottomNavbar />
+      <BottomNavbar isLoggedIn={Boolean(activeCustomerId)} navigate={navigate} />
       {activeModal && <TransactionModal type={activeModal} member={currentMember.username} onClose={() => setActiveModal(null)} />}
     </main>
   );

@@ -1,4 +1,4 @@
-import { collection, addDoc, getDocs, doc, getDoc, updateDoc, deleteDoc, query, where } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, query, where } from "firebase/firestore";
 import { db } from "../firebase";
 import type { Transaction } from "../types";
 
@@ -23,10 +23,11 @@ export async function getTransactionsByMember(memberUsername: string): Promise<T
   return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Transaction));
 }
 
-export async function createTransaction(transaction: Omit<Transaction, "id">): Promise<Transaction> {
+export async function createTransaction(transaction: Omit<Transaction, "id"> & { id?: string }): Promise<Transaction> {
   if (!db) throw new Error("Firebase not initialized");
-  const docRef = await addDoc(collection(db, COLLECTION), transaction);
-  return { id: docRef.id, ...transaction };
+  const id = transaction.id || crypto.randomUUID();
+  await setDoc(doc(db, COLLECTION, id), { ...transaction, id });
+  return { ...transaction, id } as Transaction;
 }
 
 export async function updateTransaction(id: string, data: Partial<Transaction>): Promise<void> {

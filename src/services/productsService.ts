@@ -1,4 +1,4 @@
-import { collection, addDoc, getDocs, doc, getDoc, updateDoc, deleteDoc, query, where } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, query, where } from "firebase/firestore";
 import { db } from "../firebase";
 import type { Product } from "../types";
 
@@ -23,10 +23,11 @@ export async function getProductByCode(code: string): Promise<Product | null> {
   return snapshot.empty ? null : ({ id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as Product);
 }
 
-export async function createProduct(product: Omit<Product, "id">): Promise<Product> {
+export async function createProduct(product: Omit<Product, "id"> & { id?: string }): Promise<Product> {
   if (!db) throw new Error("Firebase not initialized");
-  const docRef = await addDoc(collection(db, COLLECTION), product);
-  return { id: docRef.id, ...product };
+  const id = product.id || crypto.randomUUID();
+  await setDoc(doc(db, COLLECTION, id), { ...product, id });
+  return { ...product, id } as Product;
 }
 
 export async function updateProduct(id: string, data: Partial<Product>): Promise<void> {

@@ -1,25 +1,57 @@
+import { initialState } from "../data";
 import type { AppState } from "../types";
 
 const storageKey = "orderops-app-state";
 
-// Empty initial state - all data comes from Firestore
-const emptyState: AppState = {
-  admins: [],
-  members: [],
-  products: [],
-  banks: [],
-  transactions: [],
-  orders: [],
-  account: {
-    username: "",
-    password: "",
-    withdrawalPassword: "",
-  },
+const emptyAccount = {
+  username: "",
+  password: "",
+  withdrawalPassword: "",
 };
+
+function hasUsefulData(state: AppState) {
+  return Boolean(
+    state.admins.length ||
+      state.members.length ||
+      state.products.length ||
+      state.banks.length ||
+      state.transactions.length ||
+      state.orders.length ||
+      state.account.username,
+  );
+}
+
+function mergeAdminDefaults(admins: AppState["admins"]) {
+  if (!admins.length) return [];
+
+  const enrichedAdmins = admins.map((admin) => {
+    const fallback = initialState.admins.find((item) => item.id === admin.id || item.code === admin.code || item.name === admin.name);
+    return {
+      ...fallback,
+      ...admin,
+      username: admin.username ?? fallback?.username,
+      password: admin.password ?? fallback?.password,
+      role: admin.role ?? fallback?.role ?? "employee",
+    };
+  });
+
+  return enrichedAdmins;
+}
+
+function mergeWithRequiredDefaults(state: AppState): AppState {
+  return {
+    admins: mergeAdminDefaults(state.admins),
+    members: state.members,
+    products: state.products,
+    banks: state.banks,
+    transactions: state.transactions,
+    orders: state.orders,
+    account: state.account.username ? state.account : initialState.account,
+  };
+}
 
 export async function loadStoredState(): Promise<AppState> {
   try {
-    // Try to load from Firestore collections
     const { getAdmins } = await import("./adminsService");
     const { getMembers } = await import("./membersService");
     const { getProducts } = await import("./productsService");
@@ -28,7 +60,7 @@ export async function loadStoredState(): Promise<AppState> {
     const { getOrders } = await import("./ordersService");
     const { getSettings } = await import("./settingsService");
 
-    const [admins, members, products, banks, transactions, orders, settings] = await Promise.all([
+    const [admins, members, products, banks, transactions, orders, account] = await Promise.all([
       getAdmins(),
       getMembers(),
       getProducts(),
@@ -38,39 +70,43 @@ export async function loadStoredState(): Promise<AppState> {
       getSettings(),
     ]);
 
-    return {
+    const firestoreState: AppState = {
       admins,
       members,
       products,
       banks,
       transactions,
       orders,
-      account: settings || emptyState.account,
+      account: account ?? emptyAccount,
     };
+
+    if (hasUsefulData(firestoreState)) return mergeWithRequiredDefaults(firestoreState);
   } catch (error) {
-    console.error("Error loading from Firestore:", error);
+    console.error("Unable to load Firestore state:", error);
   }
 
-  // Fallback to localStorage
   const stored = window.localStorage.getItem(storageKey);
   if (stored) {
-    return JSON.parse(stored) as AppState;
+    const localState = JSON.parse(stored) as AppState;
+    if (hasUsefulData(localState)) {
+      return {
+        ...mergeWithRequiredDefaults(localState),
+        products: [],
+      };
+    }
   }
 
-  // Return empty state (database-first approach)
-  return emptyState;
+  return {
+    ...initialState,
+    admins: [],
+    members: [],
+    products: [],
+    banks: [],
+    transactions: [],
+    orders: [],
+  };
 }
 
-export async function saveStoredState(state: AppState) {
-  // Always save to localStorage for offline support
+export function saveLocalState(state: AppState) {
   window.localStorage.setItem(storageKey, JSON.stringify(state));
-
-  // Try to sync individual collections to Firestore
-  try {
-    // Note: For now, we're not syncing individual collection updates
-    // The reducer handles collection-specific operations
-    // This function is kept for backward compatibility
-  } catch (error) {
-    console.error("Error saving to Firestore:", error);
-  }
 }

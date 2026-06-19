@@ -1,0 +1,159 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isString(value) {
+      return value is string && value.size() > 0;
+    }
+
+    function isNumber(value) {
+      return value is number;
+    }
+
+    function isBoolean(value) {
+      return value is bool;
+    }
+
+    function isValidMemberCreate() {
+      return request.resource.data.keys().hasOnly([
+        'id',
+        'username',
+        'email',
+        'phone',
+        'invitationCode',
+        'referredBy',
+        'level',
+        'balance',
+        'totalOrders',
+        'lastLogin',
+        'accountPassword',
+        'withdrawalPassword'
+      ])
+      && isString(request.resource.data.id)
+      && isString(request.resource.data.username)
+      && isString(request.resource.data.email)
+      && isString(request.resource.data.phone)
+      && isString(request.resource.data.invitationCode)
+      && isString(request.resource.data.referredBy)
+      && request.resource.data.level in ['Starter', 'Silver', 'Gold', 'VIP']
+      && request.resource.data.balance == 0
+      && request.resource.data.totalOrders == 0
+      && isString(request.resource.data.lastLogin)
+      && isString(request.resource.data.accountPassword)
+      && isString(request.resource.data.withdrawalPassword);
+    }
+
+    function isValidProduct() {
+      return request.resource.data.keys().hasOnly([
+        'id',
+        'code',
+        'name',
+        'price',
+        'commission',
+        'quantity',
+        'category',
+        'image'
+      ])
+      && isString(request.resource.data.id)
+      && isString(request.resource.data.code)
+      && isString(request.resource.data.name)
+      && isString(request.resource.data.category)
+      && isString(request.resource.data.image)
+      && isNumber(request.resource.data.price)
+      && isNumber(request.resource.data.commission)
+      && isNumber(request.resource.data.quantity)
+      && request.resource.data.price >= 0
+      && request.resource.data.commission >= 0
+      && request.resource.data.quantity >= 0;
+    }
+
+    function isValidBank() {
+      return request.resource.data.keys().hasOnly([
+        'id',
+        'bank',
+        'accountName',
+        'accountNumber',
+        'minDeposit',
+        'active'
+      ])
+      && isString(request.resource.data.id)
+      && isString(request.resource.data.bank)
+      && isString(request.resource.data.accountName)
+      && isString(request.resource.data.accountNumber)
+      && isNumber(request.resource.data.minDeposit)
+      && isBoolean(request.resource.data.active)
+      && request.resource.data.minDeposit >= 0;
+    }
+
+    function isValidStaffCreate() {
+      return request.resource.data.keys().hasOnly([
+        'id',
+        'name',
+        'code',
+        'registrations',
+        'todayDeposits',
+        'monthDeposits',
+        'todayWithdrawals',
+        'monthWithdrawals',
+        'username',
+        'password',
+        'role'
+      ])
+      && isString(request.resource.data.id)
+      && isString(request.resource.data.name)
+      && isString(request.resource.data.code)
+      && isString(request.resource.data.username)
+      && isString(request.resource.data.password)
+      && request.resource.data.role in ['admin', 'employee']
+      && isNumber(request.resource.data.registrations)
+      && isNumber(request.resource.data.todayDeposits)
+      && isNumber(request.resource.data.monthDeposits)
+      && isNumber(request.resource.data.todayWithdrawals)
+      && isNumber(request.resource.data.monthWithdrawals)
+      && request.resource.data.registrations == 0
+      && request.resource.data.todayDeposits == 0
+      && request.resource.data.monthDeposits == 0
+      && request.resource.data.todayWithdrawals == 0
+      && request.resource.data.monthWithdrawals == 0;
+    }
+
+    match /members/{memberId} {
+      allow read: if true;
+      allow create: if request.resource.data.id == memberId && isValidMemberCreate();
+      allow update, delete: if false;
+    }
+
+    match /admins/{adminId} {
+      allow read: if true;
+      allow create: if request.resource.data.id == adminId && isValidStaffCreate();
+      allow update, delete: if false;
+    }
+
+    match /products/{productId} {
+      allow read: if true;
+      allow create, update: if request.resource.data.id == productId && isValidProduct();
+      allow delete: if false;
+    }
+
+    match /banks/{bankId} {
+      allow read: if true;
+      allow create, update: if request.resource.data.id == bankId && isValidBank();
+      allow delete: if false;
+    }
+
+    match /orders/{orderId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /transactions/{transactionId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if false;
+    }
+  }
+}

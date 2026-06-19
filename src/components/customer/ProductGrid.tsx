@@ -19,15 +19,21 @@ export default function ProductGrid({ products, favorites, onClearSearch, onTogg
         </button>
       </div>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {products.map((product) => (
-          <ProductCard
-            key={product.id}
-            product={product}
-            isFavorite={favorites.includes(product.id)}
-            onToggleFavorite={() => onToggleFavorite(product.id)}
-            onTakeOrder={() => onTakeOrder(product)}
-          />
-        ))}
+        {products.length ? (
+          products.map((product) => (
+            <ProductCard
+              key={product.id}
+              product={product}
+              isFavorite={favorites.includes(product.id)}
+              onToggleFavorite={() => onToggleFavorite(product.id)}
+              onTakeOrder={() => onTakeOrder(product)}
+            />
+          ))
+        ) : (
+          <div className="rounded bg-white p-6 text-center text-sm text-slate-500 shadow-panel sm:col-span-2 xl:col-span-3">
+            No products currently. Products added from the admin catalog will appear here.
+          </div>
+        )}
       </div>
     </section>
   );

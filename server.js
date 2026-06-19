@@ -3,7 +3,7 @@ import cors from "cors";
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 
-dotenv.config({ path: ".env.local" });
+dotenv.config();
 
 const app = express();
 
@@ -12,8 +12,8 @@ const gmailEmail = process.env.GMAIL_EMAIL;
 const gmailPassword = process.env.GMAIL_APP_PASSWORD;
 
 if (!gmailEmail || !gmailPassword) {
-  console.error("❌ Error: GMAIL_EMAIL or GMAIL_APP_PASSWORD not found in .env.local");
-  console.error("Add these to .env.local:");
+  console.error("❌ Error: GMAIL_EMAIL or GMAIL_APP_PASSWORD not found in .env");
+  console.error("Add these to .env:");
   console.error("GMAIL_EMAIL=your_email@gmail.com");
   console.error("GMAIL_APP_PASSWORD=your_16_char_app_password");
   process.exit(1);

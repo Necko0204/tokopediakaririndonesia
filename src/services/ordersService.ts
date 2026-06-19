@@ -1,4 +1,4 @@
-import { collection, addDoc, getDocs, doc, getDoc, updateDoc, deleteDoc, query, where } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, query, where } from "firebase/firestore";
 import { db } from "../firebase";
 import type { Order } from "../types";
 
@@ -30,10 +30,11 @@ export async function getOrdersByStatus(status: Order["status"]): Promise<Order[
   return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Order));
 }
 
-export async function createOrder(order: Omit<Order, "id">): Promise<Order> {
+export async function createOrder(order: Omit<Order, "id"> & { id?: string }): Promise<Order> {
   if (!db) throw new Error("Firebase not initialized");
-  const docRef = await addDoc(collection(db, COLLECTION), order);
-  return { id: docRef.id, ...order };
+  const id = order.id || crypto.randomUUID();
+  await setDoc(doc(db, COLLECTION, id), { ...order, id });
+  return { ...order, id } as Order;
 }
 
 export async function updateOrder(id: string, data: Partial<Order>): Promise<void> {

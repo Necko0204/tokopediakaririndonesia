@@ -1,13 +1,14 @@
-import { adminTabIcon, adminTabs, type AdminTab } from "../../constants";
+import { adminTabIcon, type AdminTab } from "../../constants";
 import { firebaseReady } from "../../firebase";
 
 interface AdminSidebarProps {
   activeTab: AdminTab;
+  tabs: readonly AdminTab[];
   persistence: "firebase" | "local";
   onTabChange: (tab: AdminTab) => void;
 }
 
-export default function AdminSidebar({ activeTab, persistence, onTabChange }: AdminSidebarProps) {
+export default function AdminSidebar({ activeTab, tabs, persistence, onTabChange }: AdminSidebarProps) {
   return (
     <aside className="h-fit border-b border-slate-200 pb-4 lg:sticky lg:top-20 lg:border-b-0">
       <div className="mb-4 rounded bg-white p-4 shadow-panel">
@@ -19,7 +20,7 @@ export default function AdminSidebar({ activeTab, persistence, onTabChange }: Ad
         <p className="mt-2 text-xs leading-5 text-slate-500">Current writes save to {persistence}.</p>
       </div>
       <nav className="grid grid-cols-2 gap-2 lg:grid-cols-1">
-        {adminTabs.map((tab) => (
+        {tabs.map((tab) => (
           <button
             key={tab}
             onClick={() => onTabChange(tab)}

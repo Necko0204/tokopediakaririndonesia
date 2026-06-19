@@ -1,5 +1,6 @@
 export type UserLevel = "Starter" | "Silver" | "Gold" | "VIP";
 export type TransactionStatus = "pending" | "approved" | "rejected";
+export type AdminRole = "super_admin" | "admin" | "employee";
 
 export interface StaffAdmin {
   id: string;
@@ -10,6 +11,9 @@ export interface StaffAdmin {
   monthDeposits: number;
   todayWithdrawals: number;
   monthWithdrawals: number;
+  username?: string;
+  password?: string;
+  role?: AdminRole;
 }
 
 export interface Member {

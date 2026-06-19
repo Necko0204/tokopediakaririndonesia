@@ -1,4 +1,4 @@
-import { collection, addDoc, getDocs, doc, getDoc, updateDoc, deleteDoc, query, where } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, query, where } from "firebase/firestore";
 import { db } from "../firebase";
 import type { Member } from "../types";
 
@@ -23,10 +23,18 @@ export async function getMemberByUsername(username: string): Promise<Member | nu
   return snapshot.empty ? null : ({ id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as Member);
 }
 
-export async function createMember(member: Omit<Member, "id">): Promise<Member> {
+export async function getMemberByEmail(email: string): Promise<Member | null> {
+  if (!db) return null;
+  const q = query(collection(db, COLLECTION), where("email", "==", email));
+  const snapshot = await getDocs(q);
+  return snapshot.empty ? null : ({ id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as Member);
+}
+
+export async function createMember(member: Omit<Member, "id"> & { id?: string }): Promise<Member> {
   if (!db) throw new Error("Firebase not initialized");
-  const docRef = await addDoc(collection(db, COLLECTION), member);
-  return { id: docRef.id, ...member };
+  const id = member.id || crypto.randomUUID();
+  await setDoc(doc(db, COLLECTION, id), { ...member, id });
+  return { ...member, id } as Member;
 }
 
 export async function updateMember(id: string, data: Partial<Member>): Promise<void> {

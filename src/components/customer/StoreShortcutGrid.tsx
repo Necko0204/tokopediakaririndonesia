@@ -15,8 +15,8 @@ export default function StoreShortcutGrid({ navigate, onTopUp, onWithdraw }: Sto
       <StoreShortcut icon={<WalletCards />} label="Top-up" onClick={onTopUp} />
       <StoreShortcut icon={<Banknote />} label="Withdraw" onClick={onWithdraw} />
       <StoreShortcut icon={<ReceiptText />} label="Records" onClick={() => document.getElementById("records")?.scrollIntoView({ behavior: "smooth" })} />
-      <StoreShortcut icon={<ShieldCheck />} label="Security" onClick={() => navigate("/register?code=346192")} />
-      <StoreShortcut icon={<User />} label="Account" onClick={() => navigate("/register?code=346192")} />
+      <StoreShortcut icon={<ShieldCheck />} label="Security" onClick={() => navigate("/profile#settings")} />
+      <StoreShortcut icon={<User />} label="Account" onClick={() => navigate("/login")} />
     </div>
   );
 }

@@ -1,8 +1,10 @@
 import { Bell, LogOut } from "lucide-react";
 import type { Navigate } from "../../App";
 import { adminTabIcon } from "../../constants";
+import { roleLabel } from "../../services/adminSession";
+import type { StaffAdmin } from "../../types";
 
-export default function AdminHeader({ navigate }: { navigate: Navigate }) {
+export default function AdminHeader({ activeAdmin, navigate, onLogout }: { activeAdmin: StaffAdmin; navigate: Navigate; onLogout: () => void }) {
   return (
     <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
@@ -20,7 +22,11 @@ export default function AdminHeader({ navigate }: { navigate: Navigate }) {
           <button className="grid h-10 w-10 place-items-center rounded border border-slate-200 text-slate-600" aria-label="Notifications">
             <Bell size={18} />
           </button>
-          <button className="inline-flex items-center gap-2 rounded bg-coral px-3 py-2 text-sm font-semibold text-white">
+          <div className="hidden text-right sm:block">
+            <p className="text-sm font-bold">{activeAdmin.name}</p>
+            <p className="text-xs text-slate-500">{roleLabel(activeAdmin.role)}</p>
+          </div>
+          <button className="inline-flex items-center gap-2 rounded bg-coral px-3 py-2 text-sm font-semibold text-white" onClick={onLogout}>
             <LogOut size={16} />
             <span className="hidden sm:inline">Sign out</span>
           </button>

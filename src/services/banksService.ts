@@ -1,4 +1,4 @@
-import { collection, addDoc, getDocs, doc, getDoc, updateDoc, deleteDoc } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import type { BankPlacement } from "../types";
 
@@ -16,10 +16,11 @@ export async function getBankById(id: string): Promise<BankPlacement | null> {
   return snapshot.exists() ? ({ id: snapshot.id, ...snapshot.data() } as BankPlacement) : null;
 }
 
-export async function createBank(bank: Omit<BankPlacement, "id">): Promise<BankPlacement> {
+export async function createBank(bank: Omit<BankPlacement, "id"> & { id?: string }): Promise<BankPlacement> {
   if (!db) throw new Error("Firebase not initialized");
-  const docRef = await addDoc(collection(db, COLLECTION), bank);
-  return { id: docRef.id, ...bank };
+  const id = bank.id || crypto.randomUUID();
+  await setDoc(doc(db, COLLECTION, id), { ...bank, id });
+  return { ...bank, id } as BankPlacement;
 }
 
 export async function updateBank(id: string, data: Partial<BankPlacement>): Promise<void> {

@@ -1,15 +1,13 @@
-import type { Navigate } from "../../App";
 import BalanceCard from "./BalanceCard";
 
 interface CustomerHeroProps {
   balance: number;
   persistence: "firebase" | "local";
-  navigate: Navigate;
   onTopUp: () => void;
   onWithdraw: () => void;
 }
 
-export default function CustomerHero({ balance, persistence, navigate, onTopUp, onWithdraw }: CustomerHeroProps) {
+export default function CustomerHero({ balance, persistence, onTopUp, onWithdraw }: CustomerHeroProps) {
   return (
     <section className="bg-gradient-to-r from-forest via-emerald-600 to-lime-500">
       <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 text-white sm:px-6 lg:grid-cols-[1fr_340px] lg:items-center">
@@ -19,9 +17,6 @@ export default function CustomerHero({ balance, persistence, navigate, onTopUp, 
           <div className="mt-5 flex flex-wrap gap-3">
             <button className="rounded bg-white px-4 py-3 text-sm font-bold text-forest" onClick={() => document.getElementById("products")?.scrollIntoView({ behavior: "smooth" })}>
               Start ordering
-            </button>
-            <button className="rounded border border-white/40 px-4 py-3 text-sm font-bold text-white" onClick={() => navigate("/admin")}>
-              Admin board
             </button>
           </div>
         </div>

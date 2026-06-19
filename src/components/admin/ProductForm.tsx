@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { inputClass } from "../common";
+import { createProduct } from "../../services/productsService";
 import { useAppStore } from "../../store/AppStore";
 import type { Product } from "../../types";
 
@@ -16,6 +17,8 @@ function generateProductCode(): string {
 
 export default function ProductForm() {
   const { dispatch } = useAppStore();
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
   const [form, setForm] = useState<Omit<Product, "id">>({
     code: generateProductCode(),
     name: "",
@@ -37,34 +40,47 @@ export default function ProductForm() {
 
   return (
     <form
-      className="grid gap-3 rounded bg-slate-50 p-4"
-      onSubmit={(event) => {
+      className="grid gap-4 rounded bg-slate-50 p-4"
+      onSubmit={async (event) => {
         event.preventDefault();
         if (!form.name.trim()) {
-          alert("Product name is required");
+          setMessage("Product name is required.");
           return;
         }
-        dispatch({ type: "addProduct", payload: form });
-        setForm({
-          code: generateProductCode(),
-          name: "",
-          price: 0,
-          commission: 0,
-          quantity: 1,
-          category: "Electronics",
-          image: "https://images.unsplash.com/photo-1607082349566-187342175e2f?auto=format&fit=crop&w=600&q=80",
-        });
+
+        setSaving(true);
+        setMessage("Saving product...");
+
+        try {
+          const savedProduct = await createProduct(form);
+          dispatch({ type: "addProduct", payload: savedProduct });
+          setForm({
+            code: generateProductCode(),
+            name: "",
+            price: 0,
+            commission: 0,
+            quantity: 1,
+            category: "Electronics",
+            image: "https://images.unsplash.com/photo-1607082349566-187342175e2f?auto=format&fit=crop&w=600&q=80",
+          });
+          setMessage("Product saved to Firebase.");
+        } catch (error) {
+          console.error("Failed to save product:", error);
+          setMessage("Firebase save failed. Check Firestore product rules.");
+        } finally {
+          setSaving(false);
+        }
       }}
     >
-      <div className="grid gap-3 md:grid-cols-3">
+      <div className="grid gap-4 lg:grid-cols-3">
         <div>
           <label className="text-xs font-bold text-slate-600">Code (Auto-generated)</label>
           <div className="mt-1 flex gap-2">
-            <input className={inputClass} disabled value={form.code} />
+            <input className={`${inputClass} min-w-0 flex-1`} disabled value={form.code} />
             <button
               type="button"
               onClick={handleRegenCode}
-              className="rounded bg-slate-300 px-3 py-2 font-bold text-slate-700 hover:bg-slate-400"
+              className="shrink-0 rounded bg-slate-300 px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-400"
             >
               Regen
             </button>
@@ -99,7 +115,7 @@ export default function ProductForm() {
         </div>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-3">
+      <div className="grid gap-4 lg:grid-cols-3">
         <div>
           <label className="text-xs font-bold text-slate-600">Price (IDR)</label>
           <input
@@ -128,8 +144,24 @@ export default function ProductForm() {
         </div>
       </div>
 
-      <button className="rounded bg-forest px-4 py-2 font-bold text-white hover:bg-forest/90 md:col-span-3">
-        Save product
+      <div>
+        <label className="text-xs font-bold text-slate-600">Image URL</label>
+        <input
+          className={inputClass}
+          placeholder="https://..."
+          value={form.image}
+          onChange={(event) => setForm({ ...form, image: event.target.value })}
+        />
+      </div>
+
+      {message && (
+        <p className={`rounded px-3 py-2 text-sm font-semibold ${message.includes("failed") || message.includes("required") ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-700"}`}>
+          {message}
+        </p>
+      )}
+
+      <button disabled={saving} className="rounded bg-forest px-4 py-3 font-bold text-white hover:bg-forest/90 disabled:bg-slate-400">
+        {saving ? "Saving..." : "Save product"}
       </button>
     </form>
   );
