@@ -96,6 +96,8 @@ export default function OverviewPanel({ state, totals }: OverviewPanelProps) {
                 <tr>
                   <th className="py-3">Admin</th>
                   <th>Agency code</th>
+                  <th>Invite code</th>
+                  <th>Reg. bonus</th>
                   <th>Registrations</th>
                   <th>Today deposit</th>
                   <th>Today release</th>
@@ -105,7 +107,9 @@ export default function OverviewPanel({ state, totals }: OverviewPanelProps) {
                 {state.admins.map((admin) => (
                   <tr key={admin.id}>
                     <td className="py-4 font-semibold">{admin.name}</td>
-                    <td>{admin.code}</td>
+                    <td>{admin.adminCode ?? admin.code}</td>
+                    <td>{admin.invitationCode ?? admin.code}</td>
+                    <td>{formatRupiah(admin.registrationBonus ?? 0)}</td>
                     <td>{admin.registrations}</td>
                     <td className="font-semibold text-emerald-700">{formatRupiah(admin.todayDeposits)}</td>
                     <td className="font-semibold text-coral">{formatRupiah(admin.todayWithdrawals)}</td>

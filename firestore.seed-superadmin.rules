@@ -15,6 +15,9 @@ service cloud.firestore {
         'id',
         'name',
         'code',
+        'adminCode',
+        'invitationCode',
+        'registrationBonus',
         'registrations',
         'todayDeposits',
         'monthDeposits',
@@ -27,6 +30,9 @@ service cloud.firestore {
       && request.resource.data.id == 'a0'
       && request.resource.data.name == 'Super Admin'
       && request.resource.data.code == '000001'
+      && request.resource.data.adminCode == '000001'
+      && request.resource.data.invitationCode == '000001'
+      && request.resource.data.registrationBonus == 0
       && request.resource.data.username == 'superadmin'
       && request.resource.data.password == 'super123'
       && request.resource.data.role == 'super_admin'

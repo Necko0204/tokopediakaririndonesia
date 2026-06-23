@@ -112,7 +112,7 @@ export default function RegisterPage({ navigate }: { navigate: Navigate }) {
       return;
     }
 
-    const admin = state.admins.find((item) => item.code === invitationCode);
+    const admin = state.admins.find((item) => (item.invitationCode ?? item.code) === invitationCode);
 
     if (!admin) {
       setVerifiedAdmin(null);
@@ -205,7 +205,7 @@ export default function RegisterPage({ navigate }: { navigate: Navigate }) {
         invitationCode: form.invitationCode,
         referredBy: verifiedAdmin.name,
         level: "Starter" as const,
-        balance: 0,
+        balance: verifiedAdmin.registrationBonus ?? 0,
         totalOrders: 0,
         lastLogin: new Date().toISOString().slice(0, 16).replace("T", " "),
         accountPassword: form.accountPassword,

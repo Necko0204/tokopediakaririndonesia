@@ -19,7 +19,9 @@ export default function StaffPanel({ admins }: { admins: StaffAdmin[] }) {
     name: "",
     username: "",
     password: "",
-    code: generateInviteCode(),
+    adminCode: generateInviteCode(),
+    invitationCode: generateInviteCode(),
+    registrationBonus: 0,
     role: "admin" as Exclude<AdminRole, "super_admin">,
   });
 
@@ -28,7 +30,13 @@ export default function StaffPanel({ admins }: { admins: StaffAdmin[] }) {
     setSaving(true);
     setMessage("Saving staff account...");
 
-    const duplicate = admins.find((admin) => admin.username === form.username || admin.code === form.code);
+    const duplicate = admins.find(
+      (admin) =>
+        admin.username === form.username ||
+        admin.code === form.invitationCode ||
+        admin.invitationCode === form.invitationCode ||
+        admin.adminCode === form.adminCode,
+    );
     if (duplicate) {
       setSaving(false);
       setMessage("Username or invitation code already exists.");
@@ -38,7 +46,10 @@ export default function StaffPanel({ admins }: { admins: StaffAdmin[] }) {
     try {
       const staff = await createAdmin({
         name: form.name,
-        code: form.code,
+        code: form.invitationCode,
+        adminCode: form.adminCode,
+        invitationCode: form.invitationCode,
+        registrationBonus: form.registrationBonus,
         registrations: 0,
         todayDeposits: 0,
         monthDeposits: 0,
@@ -49,7 +60,7 @@ export default function StaffPanel({ admins }: { admins: StaffAdmin[] }) {
         role: form.role,
       });
       dispatch({ type: "addAdmin", payload: staff });
-      setForm({ name: "", username: "", password: "", code: generateInviteCode(), role: "admin" });
+      setForm({ name: "", username: "", password: "", adminCode: generateInviteCode(), invitationCode: generateInviteCode(), registrationBonus: 0, role: "admin" });
       setMessage("Staff account saved to Firebase.");
       setShowForm(false);
     } catch (error) {
@@ -87,13 +98,26 @@ export default function StaffPanel({ admins }: { admins: StaffAdmin[] }) {
             </Field>
           </div>
 
-          <Field label="Invitation code">
+          <Field label="Admin code">
             <div className="flex gap-2">
-              <input className={`${inputClass} min-w-0 flex-1`} required value={form.code} onChange={(event) => setForm({ ...form, code: event.target.value.replace(/\D/g, "").slice(0, 6) })} />
-              <button type="button" className="shrink-0 rounded bg-slate-200 px-3 py-2 text-sm font-bold text-slate-700" onClick={() => setForm({ ...form, code: generateInviteCode() })}>
+              <input className={`${inputClass} min-w-0 flex-1`} required value={form.adminCode} onChange={(event) => setForm({ ...form, adminCode: event.target.value.replace(/\D/g, "").slice(0, 6) })} />
+              <button type="button" className="shrink-0 rounded bg-slate-200 px-3 py-2 text-sm font-bold text-slate-700" onClick={() => setForm({ ...form, adminCode: generateInviteCode() })}>
                 <RefreshCw size={15} />
               </button>
             </div>
+          </Field>
+
+          <Field label="Invitation code">
+            <div className="flex gap-2">
+              <input className={`${inputClass} min-w-0 flex-1`} required value={form.invitationCode} onChange={(event) => setForm({ ...form, invitationCode: event.target.value.replace(/\D/g, "").slice(0, 6) })} />
+              <button type="button" className="shrink-0 rounded bg-slate-200 px-3 py-2 text-sm font-bold text-slate-700" onClick={() => setForm({ ...form, invitationCode: generateInviteCode() })}>
+                <RefreshCw size={15} />
+              </button>
+            </div>
+          </Field>
+
+          <Field label="Registration bonus (IDR)">
+            <input className={inputClass} type="number" min={0} value={form.registrationBonus || ""} onChange={(event) => setForm({ ...form, registrationBonus: Number(event.target.value) || 0 })} placeholder="0" />
           </Field>
 
           {message && (
@@ -115,7 +139,9 @@ export default function StaffPanel({ admins }: { admins: StaffAdmin[] }) {
               <th className="py-3">Name</th>
               <th>Role</th>
               <th>Username</th>
+              <th>Admin code</th>
               <th>Invitation code</th>
+              <th>Registration bonus</th>
               <th>Registrations</th>
               <th>Today deposit</th>
             </tr>
@@ -126,7 +152,9 @@ export default function StaffPanel({ admins }: { admins: StaffAdmin[] }) {
                 <td className="py-4 font-semibold">{admin.name}</td>
                 <td>{roleLabel(admin.role)}</td>
                 <td>{admin.username ?? "-"}</td>
-                <td className="font-bold text-forest">{admin.code}</td>
+                <td className="font-bold text-slate-700">{admin.adminCode ?? admin.code}</td>
+                <td className="font-bold text-forest">{admin.invitationCode ?? admin.code}</td>
+                <td>{(admin.registrationBonus ?? 0).toLocaleString("id-ID")}</td>
                 <td>{admin.registrations}</td>
                 <td>{admin.todayDeposits.toLocaleString("id-ID")}</td>
               </tr>

@@ -2,10 +2,10 @@ import type { AppState } from "./types";
 
 export const initialState: AppState = {
   admins: [
-    { id: "a0", name: "Super Admin", code: "000001", registrations: 0, todayDeposits: 0, monthDeposits: 0, todayWithdrawals: 0, monthWithdrawals: 0, username: "superadmin", password: "super123", role: "super_admin" },
-    { id: "a1", name: "Admin 1", code: "346192", registrations: 5, todayDeposits: 3200000, monthDeposits: 48300000, todayWithdrawals: 1250000, monthWithdrawals: 21900000, username: "admin1", password: "admin123", role: "admin" },
-    { id: "a2", name: "Admin 2", code: "924894", registrations: 10, todayDeposits: 5600000, monthDeposits: 76600000, todayWithdrawals: 2100000, monthWithdrawals: 34250000, username: "employee1", password: "employee123", role: "employee" },
-    { id: "a3", name: "Admin 3", code: "618076", registrations: 12, todayDeposits: 7350000, monthDeposits: 90450000, todayWithdrawals: 3900000, monthWithdrawals: 42100000, username: "admin3", password: "admin123", role: "admin" },
+    { id: "a0", name: "Super Admin", code: "000001", adminCode: "000001", invitationCode: "000001", registrationBonus: 0, registrations: 0, todayDeposits: 0, monthDeposits: 0, todayWithdrawals: 0, monthWithdrawals: 0, username: "superadmin", password: "super123", role: "super_admin" },
+    { id: "a1", name: "Admin 1", code: "346192", adminCode: "001", invitationCode: "346192", registrationBonus: 25000, registrations: 5, todayDeposits: 3200000, monthDeposits: 48300000, todayWithdrawals: 1250000, monthWithdrawals: 21900000, username: "admin1", password: "admin123", role: "admin" },
+    { id: "a2", name: "Admin 2", code: "924894", adminCode: "002", invitationCode: "924894", registrationBonus: 35000, registrations: 10, todayDeposits: 5600000, monthDeposits: 76600000, todayWithdrawals: 2100000, monthWithdrawals: 34250000, username: "employee1", password: "employee123", role: "employee" },
+    { id: "a3", name: "Admin 3", code: "618076", adminCode: "003", invitationCode: "618076", registrationBonus: 45000, registrations: 12, todayDeposits: 7350000, monthDeposits: 90450000, todayWithdrawals: 3900000, monthWithdrawals: 42100000, username: "admin3", password: "admin123", role: "admin" },
   ],
   members: [
     { id: "14991", username: "raka.pratama", email: "raka@example.com", phone: "081375323198", invitationCode: "924894", referredBy: "Admin 2", level: "VIP", balance: 0, totalOrders: 14, lastLogin: "2026-06-14 19:42" },

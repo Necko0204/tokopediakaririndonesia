@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useReducer, useState } f
 import { firebaseReady } from "../firebase";
 import { initialState } from "../data";
 import { loadStoredState, saveLocalState } from "../services/appStateRepository";
-import type { AppState, BankPlacement, Member, Product, StaffAdmin, Transaction } from "../types";
+import type { AppState, BankPlacement, Member, Order, Product, StaffAdmin, Transaction } from "../types";
 
 type RegisterMemberPayload = {
   id?: string;
@@ -20,6 +20,7 @@ type Action =
   | { type: "createTransaction"; payload: Pick<Transaction, "member" | "type" | "amount"> }
   | { type: "updateTransaction"; payload: { id: string; status: "approved" | "rejected" } }
   | { type: "createOrder"; payload: { member: string; productId: string } }
+  | { type: "addOrder"; payload: Order }
   | { type: "completeOrder"; payload: { orderId: string } }
   | { type: "addProduct"; payload: Omit<Product, "id"> & { id?: string } }
   | { type: "addBank"; payload: Omit<BankPlacement, "id"> & { id?: string } }
@@ -47,7 +48,7 @@ function reducer(state: AppState, action: Action): AppState {
   if (action.type === "hydrate") return action.payload;
 
   if (action.type === "registerMember") {
-    const admin = state.admins.find((item) => item.code === action.payload.invitationCode);
+    const admin = state.admins.find((item) => (item.invitationCode ?? item.code) === action.payload.invitationCode);
     if (!admin) return state;
     const member: Member = {
       id: action.payload.id ?? String(Date.now()).slice(-6),
@@ -57,7 +58,7 @@ function reducer(state: AppState, action: Action): AppState {
       invitationCode: action.payload.invitationCode,
       referredBy: admin.name,
       level: "Starter",
-      balance: 0,
+      balance: admin.registrationBonus ?? 0,
       totalOrders: 0,
       lastLogin: nowStamp(),
       accountPassword: action.payload.accountPassword,
@@ -133,6 +134,7 @@ function reducer(state: AppState, action: Action): AppState {
         {
           id: nextId("ord"),
           member: member.username,
+          admin: member.referredBy,
           productCode: product.code,
           productName: product.name,
           value: product.price,
@@ -154,6 +156,20 @@ function reducer(state: AppState, action: Action): AppState {
       orders: state.orders.map((item) => (item.id === order.id ? { ...item, status: "completed" } : item)),
       members: state.members.map((member) =>
         member.username === order.member ? { ...member, balance: member.balance + order.commission } : member,
+      ),
+    };
+  }
+
+  if (action.type === "addOrder") {
+    const order = action.payload;
+    return {
+      ...state,
+      orders: [order, ...state.orders],
+      products: state.products.map((product) =>
+        product.code === order.productCode ? { ...product, quantity: Math.max(0, product.quantity - 1) } : product,
+      ),
+      members: state.members.map((member) =>
+        member.username === order.member ? { ...member, totalOrders: member.totalOrders + 1 } : member,
       ),
     };
   }

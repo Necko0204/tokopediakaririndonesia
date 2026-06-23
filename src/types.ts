@@ -6,6 +6,9 @@ export interface StaffAdmin {
   id: string;
   name: string;
   code: string;
+  adminCode?: string;
+  invitationCode?: string;
+  registrationBonus?: number;
   registrations: number;
   todayDeposits: number;
   monthDeposits: number;
@@ -64,6 +67,7 @@ export interface Transaction {
 export interface Order {
   id: string;
   member: string;
+  admin?: string;
   productCode: string;
   productName: string;
   value: number;

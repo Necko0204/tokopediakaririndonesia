@@ -36,7 +36,8 @@ service cloud.firestore {
       && isString(request.resource.data.invitationCode)
       && isString(request.resource.data.referredBy)
       && request.resource.data.level in ['Starter', 'Silver', 'Gold', 'VIP']
-      && request.resource.data.balance == 0
+      && isNumber(request.resource.data.balance)
+      && request.resource.data.balance >= 0
       && request.resource.data.totalOrders == 0
       && isString(request.resource.data.lastLogin)
       && isString(request.resource.data.accountPassword)
@@ -85,11 +86,39 @@ service cloud.firestore {
       && request.resource.data.minDeposit >= 0;
     }
 
+    function isValidOrder() {
+      return request.resource.data.keys().hasOnly([
+        'id',
+        'member',
+        'admin',
+        'productCode',
+        'productName',
+        'value',
+        'commission',
+        'status',
+        'createdAt'
+      ])
+      && isString(request.resource.data.id)
+      && isString(request.resource.data.member)
+      && isString(request.resource.data.admin)
+      && isString(request.resource.data.productCode)
+      && isString(request.resource.data.productName)
+      && isNumber(request.resource.data.value)
+      && isNumber(request.resource.data.commission)
+      && request.resource.data.status in ['assigned', 'completed', 'frozen']
+      && isString(request.resource.data.createdAt)
+      && request.resource.data.value >= 0
+      && request.resource.data.commission >= 0;
+    }
+
     function isValidStaffCreate() {
       return request.resource.data.keys().hasOnly([
         'id',
         'name',
         'code',
+        'adminCode',
+        'invitationCode',
+        'registrationBonus',
         'registrations',
         'todayDeposits',
         'monthDeposits',
@@ -102,15 +131,19 @@ service cloud.firestore {
       && isString(request.resource.data.id)
       && isString(request.resource.data.name)
       && isString(request.resource.data.code)
+      && isString(request.resource.data.adminCode)
+      && isString(request.resource.data.invitationCode)
       && isString(request.resource.data.username)
       && isString(request.resource.data.password)
       && request.resource.data.role in ['admin', 'employee']
+      && isNumber(request.resource.data.registrationBonus)
       && isNumber(request.resource.data.registrations)
       && isNumber(request.resource.data.todayDeposits)
       && isNumber(request.resource.data.monthDeposits)
       && isNumber(request.resource.data.todayWithdrawals)
       && isNumber(request.resource.data.monthWithdrawals)
       && request.resource.data.registrations == 0
+      && request.resource.data.registrationBonus >= 0
       && request.resource.data.todayDeposits == 0
       && request.resource.data.monthDeposits == 0
       && request.resource.data.todayWithdrawals == 0
@@ -143,7 +176,8 @@ service cloud.firestore {
 
     match /orders/{orderId} {
       allow read: if true;
-      allow write: if false;
+      allow create: if request.resource.data.id == orderId && isValidOrder();
+      allow update, delete: if false;
     }
 
     match /transactions/{transactionId} {

@@ -26,8 +26,8 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
   }, [state.members]);
 
   const currentMember = state.members.find((member) => member.id === activeCustomerId) ?? state.members[0];
-  const featuredProduct = state.products[0];
   const assignedOrder = currentMember ? state.orders.find((order) => order.member === currentMember.username && order.status === "assigned") : undefined;
+  const assignedProduct = assignedOrder ? state.products.find((product) => product.code === assignedOrder.productCode) : undefined;
   const notifications = useMemo<CustomerNotification[]>(() => {
     if (!currentMember) return [];
 
@@ -129,7 +129,7 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
             onTakeOrder={takeOrder}
           />
           <aside className="space-y-5">
-            <AssignmentPanel order={assignedOrder} featuredProduct={featuredProduct} onComplete={(orderId) => dispatch({ type: "completeOrder", payload: { orderId } })} />
+            <AssignmentPanel order={assignedOrder} featuredProduct={assignedProduct} onComplete={(orderId) => dispatch({ type: "completeOrder", payload: { orderId } })} />
             <DepositDestination banks={state.banks} />
             <RecentRecords transactions={state.transactions} />
           </aside>

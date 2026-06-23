@@ -55,10 +55,33 @@ export default function AdminPage({ navigate }: { navigate: Navigate }) {
     return adminMatch && textMatch;
   });
 
+  const scopedAdminNames = useMemo(() => {
+    if (!activeAdmin) return [];
+    if (activeAdmin.role !== "super_admin") return [activeAdmin.name];
+    return selectedAdmin === "All admins" ? visibleAdmins.map((admin) => admin.name) : [selectedAdmin];
+  }, [activeAdmin, selectedAdmin, visibleAdmins]);
+
+  const filteredOrders = state.orders.filter((order) => {
+    const ownerAdmin = order.admin ?? state.members.find((member) => member.username === order.member)?.referredBy;
+    const adminMatch = ownerAdmin ? scopedAdminNames.includes(ownerAdmin) : activeAdmin?.role === "super_admin" && selectedAdmin === "All admins";
+    const textMatch = `${order.member} ${order.productCode} ${order.productName}`.toLowerCase().includes(query.toLowerCase());
+    return adminMatch && textMatch;
+  });
+
+  const filteredTransactions = state.transactions.filter((transaction) => {
+    const adminMatch = scopedAdminNames.includes(transaction.admin);
+    const textMatch = `${transaction.member} ${transaction.type} ${transaction.status}`.toLowerCase().includes(query.toLowerCase());
+    return adminMatch && textMatch;
+  });
+
   const selectedAdminCode =
     selectedAdmin === "All admins"
-      ? visibleAdmins[0]?.code ?? ""
-      : visibleAdmins.find((admin) => admin.name === selectedAdmin)?.code ?? visibleAdmins[0]?.code ?? "";
+      ? visibleAdmins[0]?.invitationCode ?? visibleAdmins[0]?.code ?? ""
+      : visibleAdmins.find((admin) => admin.name === selectedAdmin)?.invitationCode ?? visibleAdmins.find((admin) => admin.name === selectedAdmin)?.code ?? visibleAdmins[0]?.invitationCode ?? visibleAdmins[0]?.code ?? "";
+  const selectedAdminDisplayCode =
+    selectedAdmin === "All admins"
+      ? visibleAdmins[0]?.adminCode ?? visibleAdmins[0]?.code ?? ""
+      : visibleAdmins.find((admin) => admin.name === selectedAdmin)?.adminCode ?? visibleAdmins.find((admin) => admin.name === selectedAdmin)?.code ?? visibleAdmins[0]?.adminCode ?? visibleAdmins[0]?.code ?? "";
 
   if (!activeAdmin) {
     return null;
@@ -80,6 +103,7 @@ export default function AdminPage({ navigate }: { navigate: Navigate }) {
           <AdminToolbar
             admins={visibleAdmins}
             registrationCode={selectedAdminCode}
+            adminCode={selectedAdminDisplayCode}
             selectedAdmin={selectedAdmin}
             query={query}
             onSelectedAdminChange={setSelectedAdmin}
@@ -87,8 +111,8 @@ export default function AdminPage({ navigate }: { navigate: Navigate }) {
           />
           {activeTab === "Overview" && <OverviewPanel state={state} totals={totals} />}
           {activeTab === "Members" && <MemberTable members={filteredMembers} />}
-          {activeTab === "Orders" && <OrderTable orders={state.orders} />}
-          {activeTab === "Finance" && <FinanceTable transactions={state.transactions} />}
+          {activeTab === "Orders" && <OrderTable orders={filteredOrders} members={filteredMembers} products={state.products} />}
+          {activeTab === "Finance" && <FinanceTable transactions={filteredTransactions} />}
           {activeTab === "Catalog" && <CatalogAdmin products={state.products} />}
           {activeTab === "Staff" && <StaffPanel admins={state.admins} />}
           {activeTab === "Account" && <AccountPanel account={state.account} />}
