@@ -16,17 +16,18 @@ async function saveToFirebase(memberData: any): Promise<boolean> {
   }
 }
 
-async function verifyInvitationCode(code: string): Promise<{ verified: boolean; adminName: string }> {
+async function verifyInvitationCode(code: string): Promise<{ verified: boolean; adminName: string; registrationBonus: number }> {
   try {
     const { getAdminByCode } = await import("../services/adminsService");
     const admin = await getAdminByCode(code);
     return {
       verified: !!admin,
       adminName: admin?.name || "",
+      registrationBonus: admin?.registrationBonus ?? 0,
     };
   } catch (error) {
     console.error("Error verifying code:", error);
-    return { verified: false, adminName: "" };
+    return { verified: false, adminName: "", registrationBonus: 0 };
   }
 }
 
@@ -44,6 +45,7 @@ export default function RegisterPage({ navigate }: { navigate: Navigate }) {
   const [loading, setLoading] = useState(false);
   const [verified, setVerified] = useState(false);
   const [verifiedAdmin, setVerifiedAdmin] = useState("");
+  const [registrationBonus, setRegistrationBonus] = useState(0);
 
   const handleVerifyCode = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,6 +58,7 @@ export default function RegisterPage({ navigate }: { navigate: Navigate }) {
     if (result.verified) {
       setVerified(true);
       setVerifiedAdmin(result.adminName);
+      setRegistrationBonus(result.registrationBonus);
       setMessage("");
     } else {
       setMessage("✗ Invalid invitation code");
@@ -85,15 +88,17 @@ export default function RegisterPage({ navigate }: { navigate: Navigate }) {
     setLoading(true);
     setMessage("Creating account...");
 
+    const memberId = String(Date.now()).slice(-6);
+
     // Create member object
     const memberToSave = {
-      id: String(Date.now()).slice(-6),
+      id: memberId,
       username: form.username,
       phone: form.phone,
       invitationCode: form.invitationCode,
       referredBy: verifiedAdmin,
       level: "Starter" as const,
-      balance: 0,
+      balance: registrationBonus,
       totalOrders: 0,
       lastLogin: new Date().toISOString().slice(0, 16).replace("T", " "),
       accountPassword: form.accountPassword,
@@ -107,6 +112,7 @@ export default function RegisterPage({ navigate }: { navigate: Navigate }) {
     dispatch({
       type: "registerMember",
       payload: {
+        id: memberId,
         username: form.username,
         phone: form.phone,
         invitationCode: form.invitationCode,

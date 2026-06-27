@@ -35,7 +35,6 @@ service cloud.firestore {
       ])
       && isString(request.resource.data.id)
       && isString(request.resource.data.username)
-      && isString(request.resource.data.email)
       && isString(request.resource.data.phone)
       && isString(request.resource.data.invitationCode)
       && isString(request.resource.data.referredBy)
