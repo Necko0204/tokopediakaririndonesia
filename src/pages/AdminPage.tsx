@@ -15,7 +15,7 @@ import { allowedTabsForRole, clearActiveAdminId, getActiveAdmin } from "../servi
 import { useAppStore } from "../store/AppStore";
 
 export default function AdminPage({ navigate }: { navigate: Navigate }) {
-  const { state, persistence } = useAppStore();
+  const { state, persistence, ready } = useAppStore();
   const activeAdmin = getActiveAdmin(state.admins);
   const allowedTabs = useMemo<readonly AdminTab[]>(() => allowedTabsForRole(activeAdmin?.role), [activeAdmin?.role]);
   const [activeTab, setActiveTab] = useState<AdminTab>("Overview");
@@ -23,8 +23,9 @@ export default function AdminPage({ navigate }: { navigate: Navigate }) {
   const [selectedAdmin, setSelectedAdmin] = useState("All admins");
 
   useEffect(() => {
+    if (!ready) return;
     if (!activeAdmin) navigate("/admin/login");
-  }, [activeAdmin, navigate]);
+  }, [activeAdmin, navigate, ready]);
 
   useEffect(() => {
     if (!allowedTabs.includes(activeTab)) setActiveTab(allowedTabs[0]);
@@ -88,6 +89,14 @@ export default function AdminPage({ navigate }: { navigate: Navigate }) {
     selectedAdmin === "All admins"
       ? visibleAdmins[0]?.adminCode ?? visibleAdmins[0]?.code ?? ""
       : visibleAdmins.find((admin) => admin.name === selectedAdmin)?.adminCode ?? visibleAdmins.find((admin) => admin.name === selectedAdmin)?.code ?? visibleAdmins[0]?.adminCode ?? visibleAdmins[0]?.code ?? "";
+
+  if (!ready) {
+    return (
+      <main className="grid min-h-screen place-items-center bg-cloud text-ink">
+        <div className="rounded bg-white px-6 py-5 text-sm font-bold text-slate-600 shadow-panel">Restoring admin session...</div>
+      </main>
+    );
+  }
 
   if (!activeAdmin) {
     return null;

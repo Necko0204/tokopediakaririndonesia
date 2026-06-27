@@ -16,18 +16,25 @@ import { useAppStore } from "../store/AppStore";
 import type { Product } from "../types";
 
 export default function CustomerPage({ navigate }: { navigate: Navigate }) {
-  const { state, dispatch, persistence } = useAppStore();
+  const { state, dispatch, ready } = useAppStore();
   const [query, setQuery] = useState("");
   const [favorites, setFavorites] = useState<string[]>([]);
   const [activeModal, setActiveModal] = useState<"topup" | "withdraw" | null>(null);
   const [taskMessage, setTaskMessage] = useState("");
   const [activeCustomerId, setActiveCustomerIdState] = useState(() => getActiveCustomerId());
 
-  useEffect(() => {
-    setActiveCustomerIdState(getActiveCustomerId());
-  }, [state.members]);
-
   const currentMember = activeCustomerId ? state.members.find((member) => member.id === activeCustomerId) : undefined;
+
+  useEffect(() => {
+    const storedCustomerId = getActiveCustomerId();
+    setActiveCustomerIdState(storedCustomerId);
+
+    if (ready && storedCustomerId && state.members.length > 0 && !state.members.some((member) => member.id === storedCustomerId)) {
+      clearActiveCustomerId();
+      setActiveCustomerIdState(null);
+    }
+  }, [ready, state.members]);
+
   const assignedOrder = currentMember ? state.orders.find((order) => order.member === currentMember.username && ["waiting", "assigned"].includes(order.status)) : undefined;
   const assignedProduct = assignedOrder ? state.products.find((product) => product.code === assignedOrder.productCode) : undefined;
   const notifications = useMemo<CustomerNotification[]>(() => {
@@ -130,6 +137,14 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
     setActiveCustomerIdState(null);
     navigate("/login");
   };
+
+  if (!ready) {
+    return (
+      <main className="grid min-h-screen place-items-center bg-[#f4f6f5] text-ink">
+        <div className="rounded bg-white px-6 py-5 text-sm font-bold text-slate-600 shadow-panel">Restoring member session...</div>
+      </main>
+    );
+  }
 
   // Show empty state if no data
   if (state.members.length === 0) {

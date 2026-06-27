@@ -6,8 +6,16 @@ import { useAppStore } from "../store/AppStore";
 import { formatRupiah, shortDate } from "../utils";
 
 export default function ProfilePage({ navigate }: { navigate: Navigate }) {
-  const { state } = useAppStore();
+  const { state, ready } = useAppStore();
   const member = getActiveCustomer(state.members);
+
+  if (!ready) {
+    return (
+      <main className="grid min-h-screen place-items-center bg-mint px-4 text-ink">
+        <div className="rounded bg-white px-6 py-5 text-sm font-bold text-slate-600 shadow-panel">Restoring member session...</div>
+      </main>
+    );
+  }
 
   if (!member) {
     return (

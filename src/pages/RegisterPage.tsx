@@ -2,6 +2,7 @@ import { Store } from "lucide-react";
 import { useState } from "react";
 import type { Navigate } from "../App";
 import { Field, inputClass } from "../components/common";
+import { setActiveCustomerId } from "../services/customerSession";
 import { useAppStore } from "../store/AppStore";
 
 async function saveToFirebase(memberData: any): Promise<boolean> {
@@ -108,22 +109,22 @@ export default function RegisterPage({ navigate }: { navigate: Navigate }) {
     // Save to Firebase
     const saved = await saveToFirebase(memberToSave);
 
-    // Dispatch to local state
-    dispatch({
-      type: "registerMember",
-      payload: {
-        id: memberId,
-        username: form.username,
-        phone: form.phone,
-        invitationCode: form.invitationCode,
-        accountPassword: form.accountPassword,
-        withdrawalPassword: form.withdrawalPassword,
-      },
-    });
-
     setLoading(false);
 
     if (saved) {
+      // Dispatch to local state
+      dispatch({
+        type: "registerMember",
+        payload: {
+          id: memberId,
+          username: form.username,
+          phone: form.phone,
+          invitationCode: form.invitationCode,
+          accountPassword: form.accountPassword,
+          withdrawalPassword: form.withdrawalPassword,
+        },
+      });
+      setActiveCustomerId(memberId);
       setMessage("✓ Account created! Redirecting...");
       setTimeout(() => navigate("/"), 1500);
     } else {
