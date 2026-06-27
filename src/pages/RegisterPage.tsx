@@ -4,8 +4,6 @@ import type { Navigate } from "../App";
 import { Field, inputClass } from "../components/common";
 import { useAppStore } from "../store/AppStore";
 
-const API_URL = "http://localhost:3001";
-
 async function saveToFirebase(memberData: any): Promise<boolean> {
   try {
     const { createMember } = await import("../services/membersService");
@@ -37,7 +35,6 @@ export default function RegisterPage({ navigate }: { navigate: Navigate }) {
   const code = new URLSearchParams(window.location.search).get("code") ?? "";
   const [form, setForm] = useState({
     username: "",
-    email: "",
     phone: "",
     invitationCode: code,
     accountPassword: "",
@@ -72,10 +69,6 @@ export default function RegisterPage({ navigate }: { navigate: Navigate }) {
       setMessage("✗ Username is required");
       return;
     }
-    if (!form.email.trim()) {
-      setMessage("✗ Email is required");
-      return;
-    }
     if (!form.phone.trim()) {
       setMessage("✗ Phone number is required");
       return;
@@ -96,7 +89,6 @@ export default function RegisterPage({ navigate }: { navigate: Navigate }) {
     const memberToSave = {
       id: String(Date.now()).slice(-6),
       username: form.username,
-      email: form.email,
       phone: form.phone,
       invitationCode: form.invitationCode,
       referredBy: verifiedAdmin,
@@ -116,7 +108,6 @@ export default function RegisterPage({ navigate }: { navigate: Navigate }) {
       type: "registerMember",
       payload: {
         username: form.username,
-        email: form.email,
         phone: form.phone,
         invitationCode: form.invitationCode,
         accountPassword: form.accountPassword,
@@ -180,15 +171,6 @@ export default function RegisterPage({ navigate }: { navigate: Navigate }) {
                 required
                 value={form.username}
                 onChange={(event) => setForm({ ...form, username: event.target.value })}
-              />
-            </Field>
-            <Field label="Email">
-              <input
-                className={inputClass}
-                type="email"
-                required
-                value={form.email}
-                onChange={(event) => setForm({ ...form, email: event.target.value })}
               />
             </Field>
             <Field label="Phone number">

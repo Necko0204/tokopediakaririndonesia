@@ -22,7 +22,6 @@ export interface StaffAdmin {
 export interface Member {
   id: string;
   username: string;
-  email: string;
   phone: string;
   invitationCode: string;
   referredBy: string;
