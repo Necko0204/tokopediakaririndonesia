@@ -9,7 +9,7 @@ export interface PaymentResponse {
 
 export interface PaymentStatusResponse {
   success: boolean;
-  status: string; // "pending", "capture", "settle", "deny", "expire", "cancel"
+  status: string;
   orderId: string;
   grossAmount: number;
 }
@@ -64,7 +64,6 @@ export async function checkPaymentStatus(orderId: string): Promise<PaymentStatus
   }
 }
 
-// Load Midtrans snap script for payment iframe
 export function loadMidtransScript(): Promise<void> {
   return new Promise((resolve) => {
     const script = document.createElement("script");
@@ -75,7 +74,6 @@ export function loadMidtransScript(): Promise<void> {
   });
 }
 
-// Open Midtrans payment iframe
 export function showMidtransPayment(token: string, onClose?: () => void) {
   if (window.snap) {
     window.snap.pay(token, {
@@ -96,7 +94,6 @@ export function showMidtransPayment(token: string, onClose?: () => void) {
   }
 }
 
-// TypeScript declaration for window.snap
 declare global {
   interface Window {
     snap: any;

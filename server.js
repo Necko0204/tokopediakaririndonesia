@@ -34,7 +34,7 @@ if (!midtransServerKey || !midtransClientKey || !midtransMerchantId) {
 
 // Initialize Midtrans Snap client
 const snap = new Midtrans.Snap({
-  isProduction: false, // Set to true for production
+  isProduction: false,
   serverKey: midtransServerKey,
   clientKey: midtransClientKey,
 });
@@ -102,7 +102,7 @@ app.post("/api/payment/create-transaction", async (req, res) => {
       },
       customer_details: {
         first_name: member,
-        email: "customer@example.com", // You can pass actual email
+        email: "customer@example.com",
       },
       item_details: [
         {
@@ -158,11 +158,44 @@ app.post("/api/payment/check-status", async (req, res) => {
   }
 });
 
+app.post("/api/payment/notification", async (req, res) => {
+  try {
+    const notification = req.body;
+    console.log("✓ Payment notification received:", notification);
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Notification error:", error);
+    res.status(500).json({ error: "Notification failed" });
+  }
+});
+
+app.post("/api/payment/recurring-notification", async (req, res) => {
+  try {
+    const notification = req.body;
+    console.log("✓ Recurring notification received:", notification);
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Recurring notification error:", error);
+    res.status(500).json({ error: "Notification failed" });
+  }
+});
+
+app.post("/api/payment/pay-account-notification", async (req, res) => {
+  try {
+    const notification = req.body;
+    console.log("✓ Pay account notification received:", notification);
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Pay account notification error:", error);
+    res.status(500).json({ error: "Notification failed" });
+  }
+});
+
 // ==================== SERVE REACT ====================
 
 app.use(express.static(path.join(__dirname, "dist")));
 
-app.get("/{*any}", (req, res) => {
+app.use((req, res) => {
   res.sendFile(path.join(__dirname, "dist", "index.html"));
 });
 
