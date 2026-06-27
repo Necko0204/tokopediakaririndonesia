@@ -1,7 +1,7 @@
-import { BadgeDollarSign, Boxes, ClipboardList, LayoutDashboard, ShieldCheck, UserCog, Users, WalletCards } from "lucide-react";
+import { Boxes, ClipboardList, LayoutDashboard, ShieldCheck, UserCog, Users, WalletCards } from "lucide-react";
 import type { TransactionStatus } from "./types";
 
-export const adminTabs = ["Overview", "Members", "Orders", "Top-up Approvals", "Finance", "Catalog", "Staff", "Account"] as const;
+export const adminTabs = ["Overview", "Members", "Orders", "Finance", "Catalog", "Staff", "Account"] as const;
 export type AdminTab = (typeof adminTabs)[number];
 
 export const statusStyles: Record<TransactionStatus | "assigned" | "completed" | "frozen", string> = {
@@ -18,7 +18,6 @@ export function adminTabIcon(tab: AdminTab) {
   if (tab === "Overview") return <LayoutDashboard {...props} />;
   if (tab === "Members") return <Users {...props} />;
   if (tab === "Orders") return <ClipboardList {...props} />;
-  if (tab === "Top-up Approvals") return <BadgeDollarSign {...props} />;
   if (tab === "Finance") return <WalletCards {...props} />;
   if (tab === "Catalog") return <Boxes {...props} />;
   if (tab === "Staff") return <UserCog {...props} />;

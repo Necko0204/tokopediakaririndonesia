@@ -10,7 +10,6 @@ import MemberTable from "../components/admin/MemberTable";
 import OrderTable from "../components/admin/OrderTable";
 import OverviewPanel from "../components/admin/OverviewPanel";
 import StaffPanel from "../components/admin/StaffPanel";
-import TopUpApprovals from "../components/admin/TopUpApprovals";
 import type { AdminTab } from "../constants";
 import { allowedTabsForRole, clearActiveAdminId, getActiveAdmin } from "../services/adminSession";
 import { useAppStore } from "../store/AppStore";
@@ -70,7 +69,8 @@ export default function AdminPage({ navigate }: { navigate: Navigate }) {
   });
 
   const filteredTransactions = state.transactions.filter((transaction) => {
-    const adminMatch = scopedAdminNames.includes(transaction.admin);
+    const ownerAdmin = transaction.admin || state.members.find((member) => member.username === transaction.member)?.referredBy;
+    const adminMatch = ownerAdmin ? scopedAdminNames.includes(ownerAdmin) : activeAdmin?.role === "super_admin" && selectedAdmin === "All admins";
     const textMatch = `${transaction.member} ${transaction.type} ${transaction.status}`.toLowerCase().includes(query.toLowerCase());
     return adminMatch && textMatch;
   });
@@ -113,7 +113,6 @@ export default function AdminPage({ navigate }: { navigate: Navigate }) {
           {activeTab === "Overview" && <OverviewPanel state={state} totals={totals} />}
           {activeTab === "Members" && <MemberTable members={filteredMembers} />}
           {activeTab === "Orders" && <OrderTable orders={filteredOrders} members={filteredMembers} products={state.products} />}
-          {activeTab === "Top-up Approvals" && <TopUpApprovals transactions={filteredTransactions} />}
           {activeTab === "Finance" && <FinanceTable transactions={filteredTransactions} />}
           {activeTab === "Catalog" && <CatalogAdmin products={state.products} />}
           {activeTab === "Staff" && <StaffPanel admins={state.admins} />}
