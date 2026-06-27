@@ -1,7 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Field, inputClass } from "../common";
 import { useAppStore } from "../../store/AppStore";
-import { createPaymentTransaction, loadMidtransScript, showMidtransPayment } from "../../services/paymentService";
 
 interface TransactionModalProps {
   type: "topup" | "withdraw";
@@ -12,16 +11,8 @@ interface TransactionModalProps {
 export default function TransactionModal({ type, member, onClose }: TransactionModalProps) {
   const { dispatch } = useAppStore();
   const [amount, setAmount] = useState(type === "topup" ? 100000 : 50000);
-  const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
-  const [midtransLoaded, setMidtransLoaded] = useState(false);
-
-  useEffect(() => {
-    // Load Midtrans script on component mount
-    loadMidtransScript()
-      .then(() => setMidtransLoaded(true))
-      .catch((error) => console.error("Failed to load Midtrans:", error));
-  }, []);
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -31,18 +22,16 @@ export default function TransactionModal({ type, member, onClose }: TransactionM
       return;
     }
 
+    if (!member) {
+      setMessage("✗ Please login first");
+      return;
+    }
+
     setLoading(true);
-    setMessage("Creating payment...");
+    setMessage("Submitting request...");
 
     try {
-      // Create payment transaction on backend
-      const paymentData = await createPaymentTransaction(member, amount, type);
-
-      if (!paymentData.token) {
-        throw new Error("No payment token received");
-      }
-
-      // Create local transaction record (pending)
+      // Create transaction with pending status (admin approval required)
       dispatch({
         type: "createTransaction",
         payload: {
@@ -52,33 +41,25 @@ export default function TransactionModal({ type, member, onClose }: TransactionM
         },
       });
 
-      setMessage("Opening Midtrans payment...");
+      setMessage("✓ Request submitted! Awaiting admin approval...");
       setLoading(false);
 
-      // Show Midtrans payment iframe
-      if (midtransLoaded && window.snap) {
-        showMidtransPayment(paymentData.token, () => {
-          setMessage("✓ Payment completed! Check your transactions.");
-          setTimeout(onClose, 2000);
-        });
-      } else {
-        setMessage("✗ Payment gateway not ready. Please try again.");
-      }
+      setTimeout(onClose, 2000);
     } catch (error) {
       setLoading(false);
-      const errorMessage = error instanceof Error ? error.message : "Payment failed";
+      const errorMessage = error instanceof Error ? error.message : "Request failed";
       setMessage(`✗ ${errorMessage}`);
-      console.error("Payment error:", error);
+      console.error("Request error:", error);
     }
   };
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/50 px-4">
       <form className="w-full max-w-sm rounded bg-white p-5 shadow-panel" onSubmit={handleSubmit}>
-        <h2 className="text-xl font-black capitalize">{type === "topup" ? "Top Up Balance" : "Withdraw Funds"}</h2>
+        <h2 className="text-xl font-black capitalize">{type === "topup" ? "Request Top Up" : "Request Withdrawal"}</h2>
 
         <div className="mt-4 rounded bg-blue-50 p-3 text-sm text-blue-700">
-          💳 Powered by Midtrans - Bank Transfer, E-Wallets & Cards accepted
+          ⏳ Your request will be reviewed by an admin for approval
         </div>
 
         <Field label="Amount (Rp)">
@@ -94,7 +75,7 @@ export default function TransactionModal({ type, member, onClose }: TransactionM
         </Field>
 
         <div className="text-xs text-slate-500">
-          Minimum: Rp 10,000 | You'll pay: <span className="font-bold text-slate-700">Rp {amount.toLocaleString("id-ID")}</span>
+          Minimum: Rp 10,000 | Amount: <span className="font-bold text-slate-700">Rp {amount.toLocaleString("id-ID")}</span>
         </div>
 
         {message && (
@@ -111,12 +92,8 @@ export default function TransactionModal({ type, member, onClose }: TransactionM
           <button className="rounded border border-slate-200 px-3 py-2 font-bold disabled:opacity-50" type="button" onClick={onClose} disabled={loading}>
             Cancel
           </button>
-          <button
-            className="rounded bg-forest px-3 py-2 font-bold text-white disabled:bg-slate-400"
-            type="submit"
-            disabled={loading || !midtransLoaded}
-          >
-            {loading ? "Processing..." : "Pay Now"}
+          <button className="rounded bg-forest px-3 py-2 font-bold text-white disabled:bg-slate-400" type="submit" disabled={loading}>
+            {loading ? "Submitting..." : "Submit Request"}
           </button>
         </div>
       </form>
