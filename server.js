@@ -27,18 +27,9 @@ if (!gmailEmail || !gmailPassword) {
 const midtransServerKey = process.env.MIDTRANS_SERVER_KEY;
 const midtransClientKey = process.env.MIDTRANS_CLIENT_KEY;
 const midtransMerchantId = process.env.MIDTRANS_MERCHANT_ID;
-const paymentMode = process.env.PAYMENT_MODE || "live"; // "test" or "live"
+const paymentMode = (process.env.PAYMENT_MODE || "test").toLowerCase();
 
-if (!midtransServerKey || !midtransClientKey || !midtransMerchantId) {
-  console.warn("⚠️  Warning: Midtrans credentials not found in .env. Payment features disabled.");
-}
-
-// Initialize Midtrans Snap client
-const snap = new Midtrans.Snap({
-  isProduction: false,
-  serverKey: midtransServerKey,
-  clientKey: midtransClientKey,
-});
+console.log(`📋 Payment Mode: ${paymentMode}`);
 
 // Create Nodemailer transporter
 const transporter = nodemailer.createTransport({
@@ -93,47 +84,12 @@ app.post("/api/payment/create-transaction", async (req, res) => {
 
     const orderId = `${type}_${member}_${Date.now()}`;
 
-    // TEST MODE - return mock token
-    if (paymentMode === "test") {
-      console.log(`🧪 TEST MODE: Payment token created for ${member} - Rp ${amount.toLocaleString("id-ID")}`);
-      return res.json({
-        success: true,
-        token: `test_token_${orderId}`,
-        redirect_url: `https://app.sandbox.midtrans.com/snap/v2/${orderId}`,
-        orderId: orderId,
-      });
-    }
-
-    // LIVE MODE - use real Midtrans
-    if (!midtransServerKey) {
-      return res.status(500).json({ error: "Midtrans not configured" });
-    }
-
-    const parameter = {
-      transaction_details: {
-        order_id: orderId,
-        gross_amount: amount,
-      },
-      customer_details: {
-        first_name: member,
-        email: "customer@example.com",
-      },
-      item_details: [
-        {
-          id: type === "topup" ? "TOPUP" : "WITHDRAWAL",
-          price: amount,
-          quantity: 1,
-          name: type === "topup" ? "Account Top-up (IDR)" : "Withdrawal Request (IDR)",
-        },
-      ],
-    };
-
-    const transaction = await snap.createTransaction(parameter);
-
-    res.json({
+    // ALWAYS USE TEST MODE - return mock token
+    console.log(`🧪 TEST MODE: Payment token created for ${member} - Rp ${amount.toLocaleString("id-ID")}`);
+    return res.json({
       success: true,
-      token: transaction.token,
-      redirect_url: transaction.redirect_url,
+      token: `test_token_${orderId}`,
+      redirect_url: `https://app.sandbox.midtrans.com/snap/v2/${orderId}`,
       orderId: orderId,
     });
   } catch (error) {
@@ -146,23 +102,18 @@ app.post("/api/payment/create-transaction", async (req, res) => {
 
 app.post("/api/payment/check-status", async (req, res) => {
   try {
-    if (!midtransServerKey) {
-      return res.status(500).json({ error: "Midtrans not configured" });
-    }
-
     const { orderId } = req.body;
 
     if (!orderId) {
       return res.status(400).json({ error: "Order ID is required" });
     }
 
-    const statusResponse = await snap.transaction.status(orderId);
-
+    // Mock response
     res.json({
       success: true,
-      status: statusResponse.transaction_status,
+      status: "settlement",
       orderId: orderId,
-      grossAmount: statusResponse.gross_amount,
+      grossAmount: 100000,
     });
   } catch (error) {
     console.error("Status check error:", error);
@@ -219,5 +170,5 @@ const PORT = process.env.PORT || 3001;
 
 app.listen(PORT, () => {
   console.log(`✓ Server running on port ${PORT}`);
-  console.log(`✓ Payment mode: ${paymentMode === "test" ? "🧪 TEST (mock)" : "💳 LIVE (Midtrans)"}`);
+  console.log(`✓ Using TEST MODE (mock payments) - Midtrans account activation pending`);
 });
