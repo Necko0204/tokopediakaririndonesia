@@ -7,7 +7,7 @@ import type { AppState, BankPlacement, Member, Order, Product, StaffAdmin, Trans
 type RegisterMemberPayload = {
   id?: string;
   username: string;
-  email: string;
+  email?: string;
   phone: string;
   invitationCode: string;
   accountPassword: string;
@@ -18,6 +18,7 @@ type Action =
   | { type: "hydrate"; payload: AppState }
   | { type: "registerMember"; payload: RegisterMemberPayload }
   | { type: "createTransaction"; payload: Pick<Transaction, "member" | "type" | "amount"> }
+  | { type: "addTransaction"; payload: Transaction }
   | { type: "updateTransaction"; payload: { id: string; status: "approved" | "rejected" } }
   | { type: "createOrder"; payload: { member: string; productId: string } }
   | { type: "addOrder"; payload: Order }
@@ -119,6 +120,10 @@ function reducer(state: AppState, action: Action): AppState {
             )
           : state.members,
     };
+  }
+
+  if (action.type === "addTransaction") {
+    return { ...state, transactions: [action.payload, ...state.transactions] };
   }
 
   if (action.type === "createOrder") {

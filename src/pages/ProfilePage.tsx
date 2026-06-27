@@ -57,7 +57,7 @@ export default function ProfilePage({ navigate }: { navigate: Navigate }) {
                 <UserRound size={30} />
               </div>
               <h1 className="mt-4 text-3xl font-black">{member.username}</h1>
-              <p className="mt-1 text-sm text-white/80">{member.email}</p>
+              <p className="mt-1 text-sm text-white/80">{member.email ?? "No email on file"}</p>
             </div>
             <div className="grid gap-2 text-sm md:text-right">
               <span className="font-semibold text-white/80">Current balance</span>

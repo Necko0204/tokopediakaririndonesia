@@ -1,14 +1,16 @@
 import { useState } from "react";
 import { Field, inputClass } from "../common";
+import { createTransaction } from "../../services/transactionsService";
 import { useAppStore } from "../../store/AppStore";
 
 interface TransactionModalProps {
   type: "topup" | "withdraw";
   member: string;
+  admin: string;
   onClose: () => void;
 }
 
-export default function TransactionModal({ type, member, onClose }: TransactionModalProps) {
+export default function TransactionModal({ type, member, admin, onClose }: TransactionModalProps) {
   const { dispatch } = useAppStore();
   const [amount, setAmount] = useState(type === "topup" ? 100000 : 50000);
   const [message, setMessage] = useState("");
@@ -31,15 +33,15 @@ export default function TransactionModal({ type, member, onClose }: TransactionM
     setMessage("Submitting request...");
 
     try {
-      // Create transaction with pending status (admin approval required)
-      dispatch({
-        type: "createTransaction",
-        payload: {
-          member,
-          type: type === "withdraw" ? "withdrawal" : "topup",
-          amount,
-        },
+      const transaction = await createTransaction({
+        member,
+        admin,
+        type: type === "withdraw" ? "withdrawal" : "topup",
+        amount,
+        status: "pending",
+        createdAt: new Date().toISOString().slice(0, 16).replace("T", " "),
       });
+      dispatch({ type: "addTransaction", payload: transaction });
 
       setMessage("✓ Request submitted! Awaiting admin approval...");
       setLoading(false);

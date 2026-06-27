@@ -111,6 +111,32 @@ service cloud.firestore {
       && request.resource.data.commission >= 0;
     }
 
+    function isValidTransactionCreate() {
+      return request.resource.data.keys().hasOnly([
+        'id',
+        'member',
+        'admin',
+        'type',
+        'amount',
+        'status',
+        'createdAt'
+      ])
+      && isString(request.resource.data.id)
+      && isString(request.resource.data.member)
+      && isString(request.resource.data.admin)
+      && request.resource.data.type in ['topup', 'withdrawal']
+      && isNumber(request.resource.data.amount)
+      && request.resource.data.amount >= 10000
+      && request.resource.data.status == 'pending'
+      && isString(request.resource.data.createdAt);
+    }
+
+    function isValidTransactionStatusUpdate() {
+      return request.resource.data.diff(resource.data).changedKeys().hasOnly(['status'])
+      && resource.data.status == 'pending'
+      && request.resource.data.status in ['approved', 'rejected'];
+    }
+
     function isValidStaffCreate() {
       return request.resource.data.keys().hasOnly([
         'id',
@@ -182,7 +208,9 @@ service cloud.firestore {
 
     match /transactions/{transactionId} {
       allow read: if true;
-      allow write: if false;
+      allow create: if request.resource.data.id == transactionId && isValidTransactionCreate();
+      allow update: if isValidTransactionStatusUpdate();
+      allow delete: if false;
     }
 
     match /settings/{settingId} {

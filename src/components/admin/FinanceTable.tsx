@@ -1,6 +1,8 @@
 import { CheckCircle2, Eye, KeyRound, LockKeyhole, XCircle } from "lucide-react";
+import { useState } from "react";
 import { Panel } from "../common";
 import { statusStyles } from "../../constants";
+import { updateTransaction as updateFirebaseTransaction } from "../../services/transactionsService";
 import { useAppStore } from "../../store/AppStore";
 import type { Transaction } from "../../types";
 import { formatRupiah, shortDate } from "../../utils";
@@ -8,6 +10,19 @@ import SecurityItem from "./SecurityItem";
 
 export default function FinanceTable({ transactions }: { transactions: Transaction[] }) {
   const { dispatch } = useAppStore();
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+
+  const updateStatus = async (id: string, status: "approved" | "rejected") => {
+    setUpdatingId(id);
+    try {
+      await updateFirebaseTransaction(id, { status });
+      dispatch({ type: "updateTransaction", payload: { id, status } });
+    } catch (error) {
+      console.error("Failed to update transaction status:", error);
+    } finally {
+      setUpdatingId(null);
+    }
+  };
 
   return (
     <div className="grid gap-5 xl:grid-cols-[1fr_360px]">
@@ -29,10 +44,10 @@ export default function FinanceTable({ transactions }: { transactions: Transacti
                 <span className={`rounded px-2 py-1 text-xs font-bold capitalize ${statusStyles[transaction.status]}`}>{transaction.status}</span>
                 {transaction.status === "pending" && (
                   <div className="flex gap-2">
-                    <button className="inline-flex items-center gap-1 rounded bg-emerald-600 px-3 py-2 text-xs font-bold text-white" onClick={() => dispatch({ type: "updateTransaction", payload: { id: transaction.id, status: "approved" } })}>
+                    <button disabled={updatingId === transaction.id} className="inline-flex items-center gap-1 rounded bg-emerald-600 px-3 py-2 text-xs font-bold text-white disabled:bg-slate-300" onClick={() => updateStatus(transaction.id, "approved")}>
                       <CheckCircle2 size={15} /> Approve
                     </button>
-                    <button className="inline-flex items-center gap-1 rounded bg-rose-600 px-3 py-2 text-xs font-bold text-white" onClick={() => dispatch({ type: "updateTransaction", payload: { id: transaction.id, status: "rejected" } })}>
+                    <button disabled={updatingId === transaction.id} className="inline-flex items-center gap-1 rounded bg-rose-600 px-3 py-2 text-xs font-bold text-white disabled:bg-slate-300" onClick={() => updateStatus(transaction.id, "rejected")}>
                       <XCircle size={15} /> Cancel
                     </button>
                   </div>

@@ -25,7 +25,7 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
     setActiveCustomerIdState(getActiveCustomerId());
   }, [state.members]);
 
-  const currentMember = state.members.find((member) => member.id === activeCustomerId) ?? state.members[0];
+  const currentMember = activeCustomerId ? state.members.find((member) => member.id === activeCustomerId) : undefined;
   const assignedOrder = currentMember ? state.orders.find((order) => order.member === currentMember.username && order.status === "assigned") : undefined;
   const assignedProduct = assignedOrder ? state.products.find((product) => product.code === assignedOrder.productCode) : undefined;
   const notifications = useMemo<CustomerNotification[]>(() => {
@@ -72,7 +72,19 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
   };
 
   const takeOrder = (product: Product) => {
+    if (!currentMember) {
+      navigate("/login");
+      return;
+    }
     dispatch({ type: "createOrder", payload: { member: currentMember!.username, productId: product.id } });
+  };
+
+  const requireLogin = (nextAction: () => void) => {
+    if (!currentMember) {
+      navigate("/login");
+      return;
+    }
+    nextAction();
   };
 
   const logout = () => {
@@ -82,7 +94,7 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
   };
 
   // Show empty state if no data
-  if (!currentMember || state.members.length === 0) {
+  if (state.members.length === 0) {
     return (
       <main className="min-h-screen bg-[#f4f6f5] pb-24 text-ink flex items-center justify-center">
         <div className="text-center">
@@ -103,20 +115,20 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
     <main className="min-h-screen bg-[#f4f6f5] pb-24 text-ink">
       <CustomerHeader
         query={query}
-        activeUsername={activeCustomerId ? currentMember.username : undefined}
+        activeUsername={currentMember?.username}
         notifications={notifications}
         onQueryChange={setQuery}
         onLogout={logout}
         navigate={navigate}
       />
       <CustomerHero
-        balance={currentMember.balance}
-        onTopUp={() => setActiveModal("topup")}
-        onWithdraw={() => setActiveModal("withdraw")}
+        balance={currentMember?.balance ?? 0}
+        onTopUp={() => requireLogin(() => setActiveModal("topup"))}
+        onWithdraw={() => requireLogin(() => setActiveModal("withdraw"))}
       />
 
       <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
-        <StoreShortcutGrid navigate={navigate} onTopUp={() => setActiveModal("topup")} onWithdraw={() => setActiveModal("withdraw")} />
+        <StoreShortcutGrid navigate={navigate} onTopUp={() => requireLogin(() => setActiveModal("topup"))} onWithdraw={() => requireLogin(() => setActiveModal("withdraw"))} />
         <PremiumBanner />
 
         <div className="mt-6 grid gap-5 lg:grid-cols-[1fr_340px]">
@@ -130,13 +142,15 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
           <aside className="space-y-5">
             <AssignmentPanel order={assignedOrder} featuredProduct={assignedProduct} onComplete={(orderId) => dispatch({ type: "completeOrder", payload: { orderId } })} />
             <DepositDestination banks={state.banks} />
-            <RecentRecords transactions={state.transactions} />
+            <RecentRecords transactions={currentMember ? state.transactions.filter((transaction) => transaction.member === currentMember.username) : []} />
           </aside>
         </div>
       </section>
 
       <BottomNavbar isLoggedIn={Boolean(activeCustomerId)} navigate={navigate} />
-      {activeModal && <TransactionModal type={activeModal} member={currentMember.username} onClose={() => setActiveModal(null)} />}
+      {activeModal && currentMember && (
+        <TransactionModal type={activeModal} member={currentMember.username} admin={currentMember.referredBy} onClose={() => setActiveModal(null)} />
+      )}
     </main>
   );
 }
