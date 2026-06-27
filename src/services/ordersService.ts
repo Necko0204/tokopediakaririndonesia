@@ -83,7 +83,7 @@ export async function assignOrderProduct(order: Order, product: Product): Promis
 
     if (quantity <= 0) throw new Error("This product task has no quantity left.");
 
-    transaction.update(productRef, { quantity: quantity - 1 });
+    transaction.update(productRef, { quantity: quantity - 1, requiredBalance: product.requiredBalance ?? 0 });
     transaction.update(orderRef, {
       productCode: nextOrder.productCode,
       productName: nextOrder.productName,

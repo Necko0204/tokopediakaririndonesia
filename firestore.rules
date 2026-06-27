@@ -74,6 +74,15 @@ service cloud.firestore {
       && request.resource.data.quantity >= 0;
     }
 
+    function isValidProductTaskUpdate() {
+      return request.resource.data.diff(resource.data).changedKeys().hasOnly(['quantity', 'requiredBalance'])
+      && request.resource.data.id == resource.data.id
+      && isNumber(request.resource.data.quantity)
+      && isNumber(request.resource.data.requiredBalance)
+      && request.resource.data.quantity >= 0
+      && request.resource.data.requiredBalance >= 0;
+    }
+
     function isValidBank() {
       return request.resource.data.keys().hasOnly([
         'id',
@@ -232,7 +241,8 @@ service cloud.firestore {
 
     match /products/{productId} {
       allow read: if true;
-      allow create, update: if request.resource.data.id == productId && isValidProduct();
+      allow create: if request.resource.data.id == productId && isValidProduct();
+      allow update: if (request.resource.data.id == productId && isValidProduct()) || isValidProductTaskUpdate();
       allow delete: if false;
     }
 
