@@ -2,12 +2,11 @@ import BalanceCard from "./BalanceCard";
 
 interface CustomerHeroProps {
   balance: number;
-  persistence: "firebase" | "local";
   onTopUp: () => void;
   onWithdraw: () => void;
 }
 
-export default function CustomerHero({ balance, persistence, onTopUp, onWithdraw }: CustomerHeroProps) {
+export default function CustomerHero({ balance, onTopUp, onWithdraw }: CustomerHeroProps) {
   return (
     <section className="bg-gradient-to-r from-forest via-emerald-600 to-lime-500">
       <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 text-white sm:px-6 lg:grid-cols-[1fr_340px] lg:items-center">
@@ -20,7 +19,7 @@ export default function CustomerHero({ balance, persistence, onTopUp, onWithdraw
             </button>
           </div>
         </div>
-        <BalanceCard balance={balance} persistence={persistence} onTopUp={onTopUp} onWithdraw={onWithdraw} />
+        <BalanceCard balance={balance} onTopUp={onTopUp} onWithdraw={onWithdraw} />
       </div>
     </section>
   );

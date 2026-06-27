@@ -111,7 +111,6 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
       />
       <CustomerHero
         balance={currentMember.balance}
-        persistence={persistence}
         onTopUp={() => setActiveModal("topup")}
         onWithdraw={() => setActiveModal("withdraw")}
       />

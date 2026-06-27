@@ -4,6 +4,7 @@ import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
+import Midtrans from "midtrans-client";
 
 dotenv.config();
 
@@ -21,6 +22,22 @@ if (!gmailEmail || !gmailPassword) {
   console.error("❌ Error: GMAIL_EMAIL or GMAIL_APP_PASSWORD not found in .env");
   process.exit(1);
 }
+
+// Midtrans configuration
+const midtransServerKey = process.env.MIDTRANS_SERVER_KEY;
+const midtransClientKey = process.env.MIDTRANS_CLIENT_KEY;
+const midtransMerchantId = process.env.MIDTRANS_MERCHANT_ID;
+
+if (!midtransServerKey || !midtransClientKey || !midtransMerchantId) {
+  console.warn("⚠️  Warning: Midtrans credentials not found in .env. Payment features disabled.");
+}
+
+// Initialize Midtrans Snap client
+const snap = new Midtrans.Snap({
+  isProduction: false, // Set to true for production
+  serverKey: midtransServerKey,
+  clientKey: midtransClientKey,
+});
 
 // Create Nodemailer transporter
 const transporter = nodemailer.createTransport({
@@ -63,6 +80,84 @@ app.post("/api/send-email", async (req, res) => {
   }
 });
 
+// ==================== MIDTRANS PAYMENT API ====================
+
+app.post("/api/payment/create-transaction", async (req, res) => {
+  try {
+    if (!midtransServerKey) {
+      return res.status(500).json({ error: "Midtrans not configured" });
+    }
+
+    const { member, amount, type } = req.body;
+
+    if (!member || !amount || !type) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    const orderId = `${type}_${member}_${Date.now()}`;
+    const parameter = {
+      transaction_details: {
+        order_id: orderId,
+        gross_amount: amount,
+      },
+      customer_details: {
+        first_name: member,
+        email: "customer@example.com", // You can pass actual email
+      },
+      item_details: [
+        {
+          id: type === "topup" ? "TOPUP" : "WITHDRAWAL",
+          price: amount,
+          quantity: 1,
+          name: type === "topup" ? "Account Top-up (IDR)" : "Withdrawal Request (IDR)",
+        },
+      ],
+    };
+
+    const transaction = await snap.createTransaction(parameter);
+
+    res.json({
+      success: true,
+      token: transaction.token,
+      redirect_url: transaction.redirect_url,
+      orderId: orderId,
+    });
+  } catch (error) {
+    console.error("Payment creation error:", error);
+    res.status(500).json({
+      error: error.message || "Failed to create payment",
+    });
+  }
+});
+
+app.post("/api/payment/check-status", async (req, res) => {
+  try {
+    if (!midtransServerKey) {
+      return res.status(500).json({ error: "Midtrans not configured" });
+    }
+
+    const { orderId } = req.body;
+
+    if (!orderId) {
+      return res.status(400).json({ error: "Order ID is required" });
+    }
+
+    const statusResponse = await snap.transaction.status(orderId);
+
+    res.json({
+      success: true,
+      status: statusResponse.transaction_status,
+      orderId: orderId,
+      grossAmount: statusResponse.gross_amount,
+    });
+  } catch (error) {
+    console.error("Status check error:", error);
+    res.status(500).json({
+      error: error.message || "Failed to check payment status",
+    });
+  }
+});
+
 // ==================== SERVE REACT ====================
 
 app.use(express.static(path.join(__dirname, "dist")));
@@ -77,4 +172,7 @@ const PORT = process.env.PORT || 3001;
 
 app.listen(PORT, () => {
   console.log(`✓ Server running on port ${PORT}`);
+  if (midtransServerKey) {
+    console.log(`✓ Midtrans payment gateway ready (Sandbox mode)`);
+  }
 });
