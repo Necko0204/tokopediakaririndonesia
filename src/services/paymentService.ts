@@ -17,7 +17,7 @@ export interface PaymentStatusResponse {
 export async function createPaymentTransaction(
   member: string,
   amount: number,
-  type: "topup" | "withdrawal",
+  type: "topup" | "withdraw",
 ): Promise<PaymentResponse> {
   try {
     const response = await fetch(`${API_URL}/api/payment/create-transaction`, {
@@ -65,12 +65,12 @@ export async function checkPaymentStatus(orderId: string): Promise<PaymentStatus
 }
 
 // Load Midtrans snap script for payment iframe
-export function loadMidtransScript() {
+export function loadMidtransScript(): Promise<void> {
   return new Promise((resolve) => {
     const script = document.createElement("script");
     script.src = "https://app.sandbox.midtrans.com/snap/snap.js";
-    script.setAttribute("data-client-key", process.env.VITE_MIDTRANS_CLIENT_KEY || "");
-    script.onload = resolve;
+    script.setAttribute("data-client-key", import.meta.env.VITE_MIDTRANS_CLIENT_KEY || "");
+    script.onload = () => resolve();
     document.body.appendChild(script);
   });
 }
@@ -79,13 +79,13 @@ export function loadMidtransScript() {
 export function showMidtransPayment(token: string, onClose?: () => void) {
   if (window.snap) {
     window.snap.pay(token, {
-      onSuccess: (result) => {
+      onSuccess: (result: any) => {
         console.log("✓ Payment successful:", result);
       },
-      onPending: (result) => {
+      onPending: (result: any) => {
         console.log("⏳ Payment pending:", result);
       },
-      onError: (result) => {
+      onError: (result: any) => {
         console.error("✗ Payment error:", result);
       },
       onClose: () => {
