@@ -10,6 +10,7 @@ import MemberTable from "../components/admin/MemberTable";
 import OrderTable from "../components/admin/OrderTable";
 import OverviewPanel from "../components/admin/OverviewPanel";
 import StaffPanel from "../components/admin/StaffPanel";
+import TopUpApprovals from "../components/admin/TopUpApprovals";
 import type { AdminTab } from "../constants";
 import { allowedTabsForRole, clearActiveAdminId, getActiveAdmin } from "../services/adminSession";
 import { useAppStore } from "../store/AppStore";
@@ -112,6 +113,7 @@ export default function AdminPage({ navigate }: { navigate: Navigate }) {
           {activeTab === "Overview" && <OverviewPanel state={state} totals={totals} />}
           {activeTab === "Members" && <MemberTable members={filteredMembers} />}
           {activeTab === "Orders" && <OrderTable orders={filteredOrders} members={filteredMembers} products={state.products} />}
+          {activeTab === "Top-up Approvals" && <TopUpApprovals transactions={filteredTransactions} />}
           {activeTab === "Finance" && <FinanceTable transactions={filteredTransactions} />}
           {activeTab === "Catalog" && <CatalogAdmin products={state.products} />}
           {activeTab === "Staff" && <StaffPanel admins={state.admins} />}
