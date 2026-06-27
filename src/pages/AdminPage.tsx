@@ -70,7 +70,12 @@ export default function AdminPage({ navigate }: { navigate: Navigate }) {
 
   const filteredTransactions = state.transactions.filter((transaction) => {
     const ownerAdmin = transaction.admin || state.members.find((member) => member.username === transaction.member)?.referredBy;
-    const adminMatch = ownerAdmin ? scopedAdminNames.includes(ownerAdmin) : activeAdmin?.role === "super_admin" && selectedAdmin === "All admins";
+    const adminMatch =
+      activeAdmin?.role === "super_admin" && selectedAdmin === "All admins"
+        ? true
+        : ownerAdmin
+          ? scopedAdminNames.includes(ownerAdmin)
+          : false;
     const textMatch = `${transaction.member} ${transaction.type} ${transaction.status}`.toLowerCase().includes(query.toLowerCase());
     return adminMatch && textMatch;
   });
