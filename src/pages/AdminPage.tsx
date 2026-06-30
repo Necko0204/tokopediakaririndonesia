@@ -132,7 +132,7 @@ export default function AdminPage({ navigate }: { navigate: Navigate }) {
           {activeTab === "Finance" && <TransactionManagementTable transactions={filteredTransactions} members={filteredMembers} />}
           {activeTab === "Catalog" && <CatalogAdmin products={state.products} />}
           {activeTab === "Staff" && <StaffPanel admins={state.admins} />}
-          {activeTab === "Account" && <AccountPanel account={state.account} />}
+          {activeTab === "Account" && <AccountPanel activeAdmin={activeAdmin} />}
         </section>
       </div>
     </main>

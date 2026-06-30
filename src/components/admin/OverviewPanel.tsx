@@ -65,22 +65,44 @@ export default function OverviewPanel({ state, totals }: OverviewPanelProps) {
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
-        <Panel title="Admin Performance" action={<button className="text-sm font-semibold text-forest" onClick={() => window.print()}>Export report</button>}>
-          <div className="mb-6 space-y-4 rounded bg-slate-50 p-4">
-            <p className="text-xs font-bold uppercase text-slate-500">Daily deposits vs releases</p>
+        <Panel title="Admin Performance" action={<button className="rounded border border-emerald-100 bg-emerald-50 px-3 py-2 text-sm font-black text-forest hover:bg-emerald-100" onClick={() => window.print()}>Export report</button>}>
+          <div className="mb-5 grid gap-3 sm:grid-cols-3">
+            <PerformanceSummary label="Active admins" value={String(state.admins.length)} tone="slate" />
+            <PerformanceSummary label="Registrations" value={String(totals.registrations)} tone="green" />
+            <PerformanceSummary label="Pending requests" value={String(pendingTransactions)} tone="amber" />
+          </div>
+
+          <div className="mb-6 rounded bg-gradient-to-br from-slate-50 to-white p-4 ring-1 ring-slate-100">
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-xs font-black uppercase tracking-wide text-slate-500">Daily deposits vs releases</p>
+                <p className="mt-1 text-sm text-slate-500">Compare today’s money in and money out per admin.</p>
+              </div>
+              <div className="flex gap-3 text-xs font-black">
+                <span className="inline-flex items-center gap-1.5 text-emerald-700"><span className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> Deposit</span>
+                <span className="inline-flex items-center gap-1.5 text-coral"><span className="h-2.5 w-2.5 rounded-full bg-coral" /> Release</span>
+              </div>
+            </div>
             {state.admins.length ? (
               state.admins.map((admin) => (
-                <div key={admin.id} className="grid gap-2">
-                  <div className="flex items-center justify-between text-xs font-bold text-slate-600">
-                    <span>{admin.name}</span>
-                    <span>{formatRupiah(admin.todayDeposits)} / {formatRupiah(admin.todayWithdrawals)}</span>
+                <div key={admin.id} className="mb-4 last:mb-0 rounded bg-white p-3 shadow-sm ring-1 ring-slate-100">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-black text-slate-800">{admin.name}</p>
+                      <p className="text-xs font-semibold text-slate-400">Code {admin.adminCode ?? admin.code}</p>
+                    </div>
+                    <div className="shrink-0 text-right text-xs font-black text-slate-600">
+                      <span className="text-emerald-700">{formatRupiah(admin.todayDeposits)}</span>
+                      <span className="mx-1 text-slate-300">/</span>
+                      <span className="text-coral">{formatRupiah(admin.todayWithdrawals)}</span>
+                    </div>
                   </div>
                   <div className="grid gap-1">
-                    <div className="h-2 overflow-hidden rounded bg-white">
-                      <div className="h-full rounded bg-emerald-500" style={{ width: `${Math.max(4, (admin.todayDeposits / maxDailyFinance) * 100)}%` }} />
+                    <div className="h-2.5 overflow-hidden rounded-full bg-slate-100">
+                      <div className="h-full rounded-full bg-emerald-500" style={{ width: `${Math.max(admin.todayDeposits ? 5 : 0, (admin.todayDeposits / maxDailyFinance) * 100)}%` }} />
                     </div>
-                    <div className="h-2 overflow-hidden rounded bg-white">
-                      <div className="h-full rounded bg-coral" style={{ width: `${Math.max(4, (admin.todayWithdrawals / maxDailyFinance) * 100)}%` }} />
+                    <div className="h-2.5 overflow-hidden rounded-full bg-slate-100">
+                      <div className="h-full rounded-full bg-coral" style={{ width: `${Math.max(admin.todayWithdrawals ? 5 : 0, (admin.todayWithdrawals / maxDailyFinance) * 100)}%` }} />
                     </div>
                   </div>
                 </div>
@@ -91,28 +113,30 @@ export default function OverviewPanel({ state, totals }: OverviewPanelProps) {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[620px] text-left text-sm">
+            <table className="w-full min-w-[760px] border-separate border-spacing-0 text-left text-sm">
               <thead className="text-xs uppercase text-slate-500">
                 <tr>
-                  <th className="py-3">Admin</th>
-                  <th>Agency code</th>
-                  <th>Invite code</th>
-                  <th>Reg. bonus</th>
-                  <th>Registrations</th>
-                  <th>Today deposit</th>
-                  <th>Today release</th>
+                  <PerformanceTh>Admin</PerformanceTh>
+                  <PerformanceTh>Agency code</PerformanceTh>
+                  <PerformanceTh>Invite code</PerformanceTh>
+                  <PerformanceTh>Reg. bonus</PerformanceTh>
+                  <PerformanceTh>Registrations</PerformanceTh>
+                  <PerformanceTh>Today deposit</PerformanceTh>
+                  <PerformanceTh>Today release</PerformanceTh>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody>
                 {state.admins.map((admin) => (
-                  <tr key={admin.id}>
-                    <td className="py-4 font-semibold">{admin.name}</td>
-                    <td>{admin.adminCode ?? admin.code}</td>
-                    <td>{admin.invitationCode ?? admin.code}</td>
-                    <td>{formatRupiah(admin.registrationBonus ?? 0)}</td>
-                    <td>{admin.registrations}</td>
-                    <td className="font-semibold text-emerald-700">{formatRupiah(admin.todayDeposits)}</td>
-                    <td className="font-semibold text-coral">{formatRupiah(admin.todayWithdrawals)}</td>
+                  <tr key={admin.id} className="group">
+                    <PerformanceTd className="font-black text-slate-900">{admin.name}</PerformanceTd>
+                    <PerformanceTd>{admin.adminCode ?? admin.code}</PerformanceTd>
+                    <PerformanceTd>{admin.invitationCode ?? admin.code}</PerformanceTd>
+                    <PerformanceTd>{formatRupiah(admin.registrationBonus ?? 0)}</PerformanceTd>
+                    <PerformanceTd>
+                      <span className="rounded bg-slate-100 px-2 py-1 text-xs font-black text-slate-700">{admin.registrations}</span>
+                    </PerformanceTd>
+                    <PerformanceTd className="font-black text-emerald-700">{formatRupiah(admin.todayDeposits)}</PerformanceTd>
+                    <PerformanceTd className="font-black text-coral">{formatRupiah(admin.todayWithdrawals)}</PerformanceTd>
                   </tr>
                 ))}
               </tbody>
@@ -175,6 +199,29 @@ function DonutRow({ label, value, percent, className }: { label: string; value: 
       </div>
     </div>
   );
+}
+
+function PerformanceSummary({ label, value, tone }: { label: string; value: string; tone: "slate" | "green" | "amber" }) {
+  const toneClass = {
+    slate: "bg-slate-50 text-slate-700 ring-slate-100",
+    green: "bg-emerald-50 text-emerald-700 ring-emerald-100",
+    amber: "bg-amber-50 text-amber-700 ring-amber-100",
+  }[tone];
+
+  return (
+    <div className={`rounded p-4 ring-1 ${toneClass}`}>
+      <p className="text-xs font-black uppercase tracking-wide opacity-75">{label}</p>
+      <p className="mt-2 text-2xl font-black">{value}</p>
+    </div>
+  );
+}
+
+function PerformanceTh({ children }: { children: React.ReactNode }) {
+  return <th className="border-b border-slate-200 bg-slate-50 px-4 py-3 font-black first:rounded-l last:rounded-r">{children}</th>;
+}
+
+function PerformanceTd({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return <td className={`border-b border-slate-100 px-4 py-4 align-middle group-hover:bg-slate-50 ${className}`}>{children}</td>;
 }
 
 function EmptyChart({ text }: { text: string }) {
