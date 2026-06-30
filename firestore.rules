@@ -116,7 +116,9 @@ service cloud.firestore {
         'status',
         'createdAt',
         'assignedAt',
-        'completedAt'
+        'completedAt',
+        'submittedAt',
+        'shippedAt'
       ])
       && isString(request.resource.data.id)
       && isString(request.resource.data.referenceNumber)
@@ -128,10 +130,12 @@ service cloud.firestore {
       && isNumber(request.resource.data.value)
       && isNumber(request.resource.data.commission)
       && isNumber(request.resource.data.requiredBalance)
-      && request.resource.data.status in ['waiting', 'assigned', 'completed', 'frozen']
+      && request.resource.data.status in ['no_task', 'waiting_assignment', 'product_assigned', 'waiting_shipment', 'belum_diserahkan', 'diserahkan', 'waiting', 'assigned', 'completed', 'frozen']
       && isString(request.resource.data.createdAt)
       && isOptionalString(request.resource.data.assignedAt)
       && isOptionalString(request.resource.data.completedAt)
+      && isOptionalString(request.resource.data.submittedAt)
+      && isOptionalString(request.resource.data.shippedAt)
       && request.resource.data.value >= 0
       && request.resource.data.commission >= 0
       && request.resource.data.requiredBalance >= 0;
@@ -241,8 +245,7 @@ service cloud.firestore {
 
     match /products/{productId} {
       allow read: if true;
-      allow create: if request.resource.data.id == productId && isValidProduct();
-      allow update: if (request.resource.data.id == productId && isValidProduct()) || isValidProductTaskUpdate();
+      allow create, update: if request.resource.data.id == productId && isValidProduct();
       allow delete: if false;
     }
 
