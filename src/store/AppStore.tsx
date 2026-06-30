@@ -142,10 +142,24 @@ function reducer(state: AppState, action: Action): AppState {
       admin: member.referredBy,
       productCode: product?.code,
       productName: product?.name,
+      quantity: product ? 1 : 0,
+      assignedProducts: product
+        ? [
+            {
+              productId: product.id,
+              code: product.code,
+              name: product.name,
+              price: product.price,
+              commission: product.commission,
+              quantity: 1,
+              total: product.price,
+            },
+          ]
+        : [],
       value: product?.price ?? 0,
       commission: product?.commission ?? 0,
-      requiredBalance: product?.requiredBalance ?? 0,
-      status: product ? "assigned" : "waiting",
+      requiredBalance: product?.price ?? 0,
+      status: product ? "product_assigned" : "waiting_assignment",
       createdAt: nowStamp(),
       assignedAt: product ? nowStamp() : undefined,
     };
@@ -176,7 +190,7 @@ function reducer(state: AppState, action: Action): AppState {
       ...state,
       orders: [order, ...state.orders],
       products: state.products.map((product) =>
-        order.status === "assigned" && product.code === order.productCode ? { ...product, quantity: Math.max(0, product.quantity - 1) } : product,
+        order.status === "product_assigned" && product.code === order.productCode ? { ...product, quantity: Math.max(0, product.quantity - (order.quantity ?? 1)) } : product,
       ),
     };
   }
@@ -184,14 +198,16 @@ function reducer(state: AppState, action: Action): AppState {
   if (action.type === "updateOrder") {
     const order = action.payload;
     const previousOrder = state.orders.find((item) => item.id === order.id);
-    const newlyAssigned = previousOrder?.status === "waiting" && order.status === "assigned";
+    const newlyAssigned = ["waiting", "waiting_assignment"].includes(previousOrder?.status ?? "") && ["assigned", "product_assigned"].includes(order.status);
     return {
       ...state,
       orders: state.orders.map((item) => (item.id === order.id ? order : item)),
-      products: newlyAssigned && order.productCode
-        ? state.products.map((product) =>
-            product.code === order.productCode ? { ...product, quantity: Math.max(0, product.quantity - 1) } : product,
-          )
+      products: newlyAssigned
+        ? state.products.map((product) => {
+            const assignedProduct = order.assignedProducts?.find((item) => item.productId === product.id || item.code === product.code);
+            if (!assignedProduct) return product;
+            return { ...product, quantity: Math.max(0, product.quantity - assignedProduct.quantity) };
+          })
         : state.products,
     };
   }

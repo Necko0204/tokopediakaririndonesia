@@ -11,9 +11,8 @@ import RecentRecords from "../components/customer/RecentRecords";
 import StoreShortcutGrid from "../components/customer/StoreShortcutGrid";
 import TransactionModal from "../components/customer/TransactionModal";
 import { clearActiveCustomerId, getActiveCustomerId } from "../services/customerSession";
-import { createOrder } from "../services/ordersService";
+import { completeWorkflowOrder, createOrder, updateOrderStatus } from "../services/ordersService";
 import { useAppStore } from "../store/AppStore";
-import type { Product } from "../types";
 
 export default function CustomerPage({ navigate }: { navigate: Navigate }) {
   const { state, dispatch, ready } = useAppStore();
@@ -37,11 +36,11 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
     }
   }, [ready, state.members]);
 
-  const activeOrder = currentMember 
+  const activeOrder = currentMember
     ? state.orders.find((order) => 
         order.member === currentMember.username && 
         !["completed", "diserahkan"].includes(order.status)
-      ) 
+      ) ?? null
     : null;
 
   const notifications = useMemo<CustomerNotification[]>(() => {
@@ -92,6 +91,10 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
       navigate("/login");
       return;
     }
+    if (activeOrder) {
+      setTaskMessage("You already have an active task. Complete it before taking another task.");
+      return;
+    }
 
     setIsAcceptingTask(true);
     try {
@@ -115,23 +118,45 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
     }
   };
 
+  const handleStartShipment = async () => {
+    if (!activeOrder) return;
+    if (activeOrder.status === "waiting_shipment") return;
+
+    const order = await updateOrderStatus(activeOrder, "waiting_shipment", {
+      submittedAt: new Date().toISOString().slice(0, 16).replace("T", " "),
+    });
+    dispatch({ type: "updateOrder", payload: order });
+  };
+
   const handleSubmitOrder = async () => {
     if (!activeOrder || !currentMember) return;
 
     setIsSubmittingOrder(true);
     try {
-      dispatch({
-        type: "updateOrder",
-        payload: {
-          ...activeOrder,
-          status: "waiting_shipment",
-          submittedAt: new Date().toISOString().slice(0, 16).replace("T", " "),
-        },
+      const order = await updateOrderStatus(activeOrder, "belum_diserahkan", {
+        submittedAt: activeOrder.submittedAt ?? new Date().toISOString().slice(0, 16).replace("T", " "),
       });
-      setTaskMessage("Order submitted successfully! Waiting for shipment confirmation.");
+      dispatch({ type: "updateOrder", payload: order });
+      setTaskMessage("Order submitted successfully. Status: Belum Diserahkan.");
     } catch (error) {
       console.error("Failed to submit order:", error);
       setTaskMessage("Unable to submit order. Please try again.");
+    } finally {
+      setIsSubmittingOrder(false);
+    }
+  };
+
+  const handleConfirmDelivery = async () => {
+    if (!activeOrder || !currentMember) return;
+
+    setIsSubmittingOrder(true);
+    try {
+      const result = await completeWorkflowOrder(activeOrder, currentMember);
+      dispatch({ type: "completeOrderWithMember", payload: result });
+      setTaskMessage(`Order completed. Commission ${result.order.commission.toLocaleString("id-ID")} IDR added to your balance.`);
+    } catch (error) {
+      console.error("Failed to confirm shipment:", error);
+      setTaskMessage(error instanceof Error ? error.message : "Unable to confirm shipment.");
     } finally {
       setIsSubmittingOrder(false);
     }
@@ -207,7 +232,7 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
             favorites={favorites}
             onClearSearch={() => setQuery("")}
             onToggleFavorite={toggleFavorite}
-            onTakeOrder={() => {}}
+            onTakeOrder={handleAcceptTask}
           />
           <aside className="space-y-5">
             <AssignmentPanel
@@ -216,7 +241,9 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
               memberBalance={currentMember?.balance ?? 0}
               member={currentMember}
               onAcceptTask={handleAcceptTask}
+              onStartShipment={handleStartShipment}
               onSubmitOrder={handleSubmitOrder}
+              onConfirmDelivery={handleConfirmDelivery}
               onTopUp={() => requireLogin(() => setActiveModal("topup"))}
               isLoading={isAcceptingTask || isSubmittingOrder}
             />

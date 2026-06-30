@@ -4,6 +4,7 @@ import { Field, inputClass, Panel } from "../common";
 import { formatRupiah, shortDate } from "../../utils";
 import { useAppStore } from "../../store/AppStore";
 import type { Member, Order, Product } from "../../types";
+import { assignOrderProducts } from "../../services/ordersService";
 
 interface TaskAssignmentTableProps {
   orders: Order[];
@@ -15,16 +16,20 @@ export default function TaskAssignmentTable({ orders, members, products }: TaskA
   const { dispatch } = useAppStore();
   const [showAssignForm, setShowAssignForm] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState("");
-  const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
+  const [selectedQuantities, setSelectedQuantities] = useState<Record<string, number>>({});
   const [isAssigning, setIsAssigning] = useState(false);
   const [message, setMessage] = useState("");
 
   // Filter orders that are waiting for assignment
-  const waitingAssignmentOrders = orders.filter((order) => order.status === "waiting_assignment");
+  const waitingAssignmentOrders = orders.filter((order) => order.status === "waiting_assignment" || order.status === "waiting");
 
   const handleAssignProducts = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    const selectedProductIds = Object.entries(selectedQuantities)
+      .filter(([, quantity]) => quantity > 0)
+      .map(([productId]) => productId);
+
     if (!selectedOrderId || selectedProductIds.length === 0) {
       setMessage("Please select an order and at least one product");
       return;
@@ -40,34 +45,19 @@ export default function TaskAssignmentTable({ orders, members, products }: TaskA
     setMessage("Assigning products...");
 
     try {
-      // For now, assign the first selected product (in real scenario, could handle multiple)
-      const firstProductId = selectedProductIds[0];
-      const product = products.find((p) => p.id === firstProductId);
-      
-      if (!product) {
-        throw new Error("Product not found");
-      }
+      const selectedItems = selectedProductIds.map((productId) => {
+        const product = products.find((p) => p.id === productId);
+        if (!product) throw new Error("Product not found");
+        return { product, quantity: selectedQuantities[productId] ?? 1 };
+      });
 
-      // Calculate total required balance for all selected products
-      const selectedProducts = products.filter((p) => selectedProductIds.includes(p.id));
-      const totalRequiredBalance = selectedProducts.reduce((sum, p) => sum + p.price, 0);
-
-      const updatedOrder: Order = {
-        ...order,
-        productCode: product.code,
-        productName: product.name,
-        value: product.price,
-        commission: product.commission,
-        requiredBalance: totalRequiredBalance,
-        status: "product_assigned",
-        assignedAt: new Date().toISOString().slice(0, 16).replace("T", " "),
-      };
+      const updatedOrder = await assignOrderProducts(order, selectedItems);
 
       dispatch({ type: "updateOrder", payload: updatedOrder });
       
       setMessage("Products assigned successfully!");
       setSelectedOrderId("");
-      setSelectedProductIds([]);
+      setSelectedQuantities({});
       setShowAssignForm(false);
     } catch (error) {
       setMessage(`Error: ${error instanceof Error ? error.message : "Failed to assign products"}`);
@@ -100,7 +90,7 @@ export default function TaskAssignmentTable({ orders, members, products }: TaskA
           onClick={() => setShowAssignForm(!showAssignForm)}
           className="inline-flex items-center gap-2 rounded bg-forest px-3 py-2 text-sm font-semibold text-white"
         >
-          <Plus size={16} /> Assign Products
+          <Plus size={16} /> Add Product
         </button>
       }
     >
@@ -127,27 +117,45 @@ export default function TaskAssignmentTable({ orders, members, products }: TaskA
             </Field>
 
             <Field label="Select Products">
-              <div className="space-y-2 border rounded p-2 bg-white max-h-40 overflow-y-auto">
+              <div className="space-y-2 border rounded p-2 bg-white max-h-52 overflow-y-auto">
                 {products.length === 0 ? (
                   <p className="text-sm text-slate-500">No products available</p>
                 ) : (
                   products.map((product) => (
-                    <label key={product.id} className="flex items-center gap-2 text-sm">
+                    <div key={product.id} className="grid grid-cols-[auto_1fr_76px] items-center gap-2 text-sm">
                       <input
                         type="checkbox"
-                        checked={selectedProductIds.includes(product.id)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedProductIds([...selectedProductIds, product.id]);
-                          } else {
-                            setSelectedProductIds(selectedProductIds.filter((id) => id !== product.id));
-                          }
-                        }}
+                        checked={(selectedQuantities[product.id] ?? 0) > 0}
+                        onChange={(e) =>
+                          setSelectedQuantities((current) => {
+                            const next = { ...current };
+                            if (e.target.checked) next[product.id] = Math.max(1, next[product.id] ?? 1);
+                            else delete next[product.id];
+                            return next;
+                          })
+                        }
                         className="rounded"
                       />
-                      <span className="flex-1">{product.code} - {product.name}</span>
-                      <span className="text-xs text-slate-500">{formatRupiah(product.price)}</span>
-                    </label>
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold">{product.code} - {product.name}</p>
+                        <p className="text-xs text-slate-500">{formatRupiah(product.price)} · Stock {product.quantity}</p>
+                      </div>
+                      <input
+                        className="rounded border border-slate-200 px-2 py-1 text-sm"
+                        type="number"
+                        min={1}
+                        max={product.quantity}
+                        disabled={(selectedQuantities[product.id] ?? 0) <= 0}
+                        value={selectedQuantities[product.id] || ""}
+                        onChange={(event) =>
+                          setSelectedQuantities((current) => ({
+                            ...current,
+                            [product.id]: Math.max(1, Math.min(product.quantity, Number(event.target.value) || 1)),
+                          }))
+                        }
+                        placeholder="Qty"
+                      />
+                    </div>
                   ))
                 )}
               </div>
@@ -169,6 +177,7 @@ export default function TaskAssignmentTable({ orders, members, products }: TaskA
               type="button"
               onClick={() => {
                 setShowAssignForm(false);
+                setSelectedQuantities({});
                 setMessage("");
               }}
               className="flex-1 rounded border border-slate-200 px-3 py-2 font-bold hover:bg-slate-50"
@@ -180,7 +189,7 @@ export default function TaskAssignmentTable({ orders, members, products }: TaskA
               disabled={isAssigning}
               className="flex-1 rounded bg-forest px-3 py-2 font-bold text-white hover:bg-forest/90 disabled:bg-slate-400"
             >
-              {isAssigning ? "Assigning..." : "Assign Products"}
+              {isAssigning ? "Assigning..." : "Save Products"}
             </button>
           </div>
         </form>
@@ -192,7 +201,11 @@ export default function TaskAssignmentTable({ orders, members, products }: TaskA
         ) : (
           orders.map((order) => {
             const member = members.find((m) => m.username === order.member);
-            const assignedProduct = order.productCode ? products.find((p) => p.code === order.productCode) : null;
+            const assignedProducts = order.assignedProducts?.length
+              ? order.assignedProducts
+              : order.productCode
+                ? [{ code: order.productCode, name: order.productName ?? "Assigned product", quantity: order.quantity ?? 1, price: order.value, total: order.value, commission: order.commission, productId: order.productCode }]
+                : [];
             
             return (
               <div
@@ -207,8 +220,10 @@ export default function TaskAssignmentTable({ orders, members, products }: TaskA
 
                 <div>
                   <p className="text-xs text-slate-500 uppercase">Product</p>
-                  <p className="font-bold">{assignedProduct?.name || "Pending..."}</p>
-                  <p className="text-xs text-slate-600">{assignedProduct?.code || order.productCode || "-"}</p>
+                  <p className="font-bold">{assignedProducts.length ? `${assignedProducts.length} product(s)` : "Pending..."}</p>
+                  <p className="text-xs text-slate-600">
+                    {assignedProducts.map((product) => `${product.code} x${product.quantity}`).join(", ") || "-"}
+                  </p>
                 </div>
 
                 <div>

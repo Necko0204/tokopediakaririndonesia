@@ -47,6 +47,16 @@ export interface Product {
   image: string;
 }
 
+export interface AssignedOrderProduct {
+  productId: string;
+  code: string;
+  name: string;
+  price: number;
+  commission: number;
+  quantity: number;
+  total: number;
+}
+
 export interface BankPlacement {
   id: string;
   bank: string;
@@ -78,6 +88,8 @@ export interface Order {
   admin?: string;
   productCode?: string;
   productName?: string;
+  quantity?: number;
+  assignedProducts?: AssignedOrderProduct[];
   value: number;
   commission: number;
   requiredBalance?: number;

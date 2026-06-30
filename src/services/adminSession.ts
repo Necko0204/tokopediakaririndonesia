@@ -28,7 +28,7 @@ export function roleLabel(role?: AdminRole) {
 }
 
 export function allowedTabsForRole(role?: AdminRole) {
-  if (role === "super_admin") return ["Overview", "Members", "Orders", "Finance", "Catalog", "Staff", "Account"] as const;
-  if (role === "admin") return ["Overview", "Members", "Orders", "Finance", "Catalog"] as const;
-  return ["Overview", "Members", "Orders"] as const;
+  if (role === "super_admin") return ["Overview", "Members", "Tasks", "Orders", "Finance", "Catalog", "Staff", "Account"] as const;
+  if (role === "admin") return ["Overview", "Members", "Tasks", "Orders", "Finance", "Catalog"] as const;
+  return ["Overview", "Members", "Tasks", "Orders"] as const;
 }

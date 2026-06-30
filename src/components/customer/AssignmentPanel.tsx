@@ -16,7 +16,9 @@ interface AssignmentPanelProps {
   memberBalance: number;
   member?: Member;
   onAcceptTask: () => void;
+  onStartShipment?: () => void;
   onSubmitOrder: () => void;
+  onConfirmDelivery?: () => void;
   onTopUp?: () => void;
   isLoading?: boolean;
 }
@@ -27,7 +29,9 @@ export default function AssignmentPanel({
   memberBalance,
   member,
   onAcceptTask,
+  onStartShipment,
   onSubmitOrder,
+  onConfirmDelivery,
   onTopUp,
   isLoading = false,
 }: AssignmentPanelProps) {
@@ -36,9 +40,29 @@ export default function AssignmentPanel({
   const state = getOrderState(order);
   const hasProducts = hasProductsAssigned(order);
   const assignedProduct = order && products.find((p) => p.code === order.productCode);
+  const assignedProducts = order?.assignedProducts?.length
+    ? order.assignedProducts
+    : assignedProduct
+      ? [
+          {
+            productId: assignedProduct.id,
+            code: assignedProduct.code,
+            name: assignedProduct.name,
+            price: assignedProduct.price,
+            commission: assignedProduct.commission,
+            quantity: order?.quantity ?? 1,
+            total: assignedProduct.price * (order?.quantity ?? 1),
+          },
+        ]
+      : [];
 
-  const handleSubmitClick = () => {
-    setShowWalletValidation(true);
+  const handleSubmitClick = async () => {
+    try {
+      await onStartShipment?.();
+      setShowWalletValidation(true);
+    } catch (error) {
+      console.error("Failed to prepare shipment confirmation:", error);
+    }
   };
 
   const handleWalletConfirm = () => {
@@ -105,24 +129,26 @@ export default function AssignmentPanel({
               </span>
             </div>
 
-            {assignedProduct && (
-              <div className="rounded border border-slate-200 p-4 mb-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs text-slate-500 uppercase">Product</p>
-                    <p className="font-bold">{assignedProduct.name}</p>
-                    <p className="text-sm text-slate-600">{assignedProduct.code}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-500 uppercase">Price</p>
-                    <p className="font-bold">{formatRupiah(assignedProduct.price)}</p>
-                    <p className="text-sm text-emerald-700">
-                      Commission: {formatRupiah(assignedProduct.commission)}
-                    </p>
+            <div className="space-y-3">
+              {assignedProducts.map((product) => (
+                <div key={`${product.code}-${product.quantity}`} className="rounded border border-slate-200 p-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs text-slate-500 uppercase">Product</p>
+                      <p className="font-bold">{product.name}</p>
+                      <p className="text-sm text-slate-600">{product.code}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500 uppercase">Qty / Total</p>
+                      <p className="font-bold">{product.quantity} × {formatRupiah(product.price)}</p>
+                      <p className="text-sm text-emerald-700">
+                        Commission: {formatRupiah(product.commission * product.quantity)}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              ))}
+            </div>
 
             <div className="rounded bg-slate-50 p-4 mb-4">
               <p className="text-xs text-slate-500 uppercase mb-2">Required Balance</p>
@@ -131,23 +157,13 @@ export default function AssignmentPanel({
             </div>
           </div>
 
-          {state === "product_assigned" && (
+          {(state === "product_assigned" || state === "waiting_shipment") && (
             <button
               onClick={handleSubmitClick}
               disabled={isLoading}
               className="w-full rounded bg-emerald-600 px-4 py-3 font-bold text-white hover:bg-emerald-700 disabled:bg-slate-400"
             >
-              {isLoading ? "Submitting..." : "Yes, Send Order"}
-            </button>
-          )}
-
-          {state === "waiting_shipment" && (
-            <button
-              onClick={() => setShowReceipt(true)}
-              className="w-full flex items-center justify-center gap-2 rounded bg-sky-600 px-4 py-3 font-bold text-white hover:bg-sky-700"
-            >
-              <FileText size={18} />
-              View Receipt
+              {isLoading ? "Submitting..." : state === "product_assigned" ? "Kirim Pesanan" : "Yes, Kirim"}
             </button>
           )}
 
@@ -170,6 +186,15 @@ export default function AssignmentPanel({
                   >
                     Download Receipt →
                   </button>
+                  {state === "belum_diserahkan" && (
+                    <button
+                      onClick={onConfirmDelivery}
+                      disabled={isLoading}
+                      className="mt-3 w-full rounded bg-forest px-3 py-2 text-xs font-bold text-white disabled:bg-slate-400"
+                    >
+                      Confirm Shipment
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

@@ -3,9 +3,10 @@ import { useState } from "react";
 import { Field, inputClass, Panel } from "../common";
 import { formatRupiah, shortDate } from "../../utils";
 import { useAppStore } from "../../store/AppStore";
-import type { Transaction } from "../../types";
+import { approveTransactionRequest } from "../../services/transactionsService";
+import type { Member, Transaction } from "../../types";
 
-export default function TransactionManagementTable({ transactions, members }: { transactions: Transaction[]; members: any[] }) {
+export default function TransactionManagementTable({ transactions, members }: { transactions: Transaction[]; members: Member[] }) {
   const { dispatch } = useAppStore();
   const [selectedTransactionId, setSelectedTransactionId] = useState("");
   const [message, setMessage] = useState("");
@@ -19,6 +20,9 @@ export default function TransactionManagementTable({ transactions, members }: { 
 
     setIsProcessing(true);
     try {
+      const member = members.find((item) => item.username === transaction.member);
+      if (!member) throw new Error("Member not found");
+      const updatedMember = await approveTransactionRequest(transaction, member, "approved");
       dispatch({
         type: "updateTransaction",
         payload: {
@@ -26,6 +30,7 @@ export default function TransactionManagementTable({ transactions, members }: { 
           status: "approved",
         },
       });
+      dispatch({ type: "updateMember", payload: updatedMember });
       setMessage(`${transaction.type === "topup" ? "Top-up" : "Withdrawal"} approved successfully!`);
       setSelectedTransactionId("");
     } catch (error) {
@@ -41,6 +46,9 @@ export default function TransactionManagementTable({ transactions, members }: { 
 
     setIsProcessing(true);
     try {
+      const member = members.find((item) => item.username === transaction.member);
+      if (!member) throw new Error("Member not found");
+      await approveTransactionRequest(transaction, member, "rejected");
       dispatch({
         type: "updateTransaction",
         payload: {

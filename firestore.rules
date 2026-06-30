@@ -110,6 +110,8 @@ service cloud.firestore {
         'admin',
         'productCode',
         'productName',
+        'quantity',
+        'assignedProducts',
         'value',
         'commission',
         'requiredBalance',
@@ -127,6 +129,11 @@ service cloud.firestore {
       && isString(request.resource.data.admin)
       && isOptionalString(request.resource.data.productCode)
       && isOptionalString(request.resource.data.productName)
+      && isNumber(request.resource.data.quantity)
+      && (
+        !request.resource.data.keys().hasAny(['assignedProducts'])
+        || request.resource.data.assignedProducts is list
+      )
       && isNumber(request.resource.data.value)
       && isNumber(request.resource.data.commission)
       && isNumber(request.resource.data.requiredBalance)
