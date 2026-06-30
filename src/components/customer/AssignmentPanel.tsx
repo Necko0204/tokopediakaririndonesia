@@ -1,6 +1,7 @@
-import { CheckCircle2, Clock, Package } from "lucide-react";
+import { CheckCircle2, Clock, Package, FileText } from "lucide-react";
 import { useState } from "react";
-import type { Order, Product } from "../../types";
+import Receipt from "./Receipt";
+import type { Member, Order, Product } from "../../types";
 import { formatRupiah } from "../../utils";
 import { 
   getOrderState, 
@@ -13,6 +14,7 @@ interface AssignmentPanelProps {
   order: Order | null;
   products: Product[];
   memberBalance: number;
+  member?: Member;
   onAcceptTask: () => void;
   onSubmitOrder: () => void;
   onTopUp?: () => void;
@@ -23,28 +25,27 @@ export default function AssignmentPanel({
   order,
   products,
   memberBalance,
+  member,
   onAcceptTask,
   onSubmitOrder,
   onTopUp,
   isLoading = false,
 }: AssignmentPanelProps) {
   const [showWalletValidation, setShowWalletValidation] = useState(false);
+  const [showReceipt, setShowReceipt] = useState(false);
   const state = getOrderState(order);
   const hasProducts = hasProductsAssigned(order);
   const assignedProduct = order && products.find((p) => p.code === order.productCode);
 
   const handleSubmitClick = () => {
-    // Show wallet validation modal
     setShowWalletValidation(true);
   };
 
   const handleWalletConfirm = () => {
     setShowWalletValidation(false);
-    // Check if balance is sufficient
     if (memberBalance >= (order?.requiredBalance || 0)) {
       onSubmitOrder();
     } else {
-      // Balance insufficient, user needs to top up
       onTopUp?.();
     }
   };
@@ -91,7 +92,7 @@ export default function AssignmentPanel({
     );
   }
 
-  // STATE 3 & 4: Product Assigned / Waiting Shipment
+  // STATE 3-4: Product Assigned / Waiting Shipment
   if (hasProducts) {
     return (
       <>
@@ -140,29 +141,35 @@ export default function AssignmentPanel({
             </button>
           )}
 
-          {(state === "waiting_shipment" || state === "belum_diserahkan") && (
-            <div className="rounded bg-orange-50 p-4 border border-orange-200">
-              <div className="flex items-start gap-2">
-                <CheckCircle2 size={20} className="text-orange-600 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-bold text-sm mb-1">Order Submitted</p>
-                  <p className="text-xs text-slate-600">
-                    Your order has been submitted and is waiting for delivery confirmation.
-                  </p>
-                </div>
-              </div>
-            </div>
+          {state === "waiting_shipment" && (
+            <button
+              onClick={() => setShowReceipt(true)}
+              className="w-full flex items-center justify-center gap-2 rounded bg-sky-600 px-4 py-3 font-bold text-white hover:bg-sky-700"
+            >
+              <FileText size={18} />
+              View Receipt
+            </button>
           )}
 
-          {state === "diserahkan" && (
+          {(state === "belum_diserahkan" || state === "diserahkan") && (
             <div className="rounded bg-emerald-50 p-4 border border-emerald-200">
               <div className="flex items-start gap-2">
                 <CheckCircle2 size={20} className="text-emerald-600 flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-bold text-sm mb-1">Order Completed</p>
-                  <p className="text-xs text-slate-600">
-                    Your order has been successfully completed and delivered.
+                  <p className="font-bold text-sm mb-1">
+                    {state === "diserahkan" ? "Order Completed" : "Awaiting Delivery"}
                   </p>
+                  <p className="text-xs text-slate-600">
+                    {state === "diserahkan"
+                      ? "Your order has been successfully completed and delivered."
+                      : "Your order has been submitted and is waiting for delivery confirmation."}
+                  </p>
+                  <button
+                    onClick={() => setShowReceipt(true)}
+                    className="text-xs font-bold text-emerald-700 hover:underline mt-2"
+                  >
+                    Download Receipt →
+                  </button>
                 </div>
               </div>
             </div>
@@ -176,6 +183,14 @@ export default function AssignmentPanel({
             onConfirm={handleWalletConfirm}
             onCancel={() => setShowWalletValidation(false)}
             isLoading={isLoading}
+          />
+        )}
+
+        {showReceipt && order && member && (
+          <Receipt
+            order={order}
+            member={member}
+            onClose={() => setShowReceipt(false)}
           />
         )}
       </>

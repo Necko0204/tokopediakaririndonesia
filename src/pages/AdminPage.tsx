@@ -5,7 +5,7 @@ import AdminHeader from "../components/admin/AdminHeader";
 import AdminSidebar from "../components/admin/AdminSidebar";
 import AdminToolbar from "../components/admin/AdminToolbar";
 import CatalogAdmin from "../components/admin/CatalogAdmin";
-import FinanceTable from "../components/admin/FinanceTable";
+import TransactionManagementTable from "../components/admin/TransactionManagementTable";
 import MemberTable from "../components/admin/MemberTable";
 import OrderTable from "../components/admin/OrderTable";
 import OverviewPanel from "../components/admin/OverviewPanel";
@@ -129,7 +129,7 @@ export default function AdminPage({ navigate }: { navigate: Navigate }) {
           {activeTab === "Members" && <MemberTable members={filteredMembers} />}
           {activeTab === "Tasks" && <TaskAssignmentTable orders={filteredOrders} members={filteredMembers} products={state.products} />}
           {activeTab === "Orders" && <OrderTable orders={filteredOrders} members={filteredMembers} products={state.products} />}
-          {activeTab === "Finance" && <FinanceTable transactions={filteredTransactions} members={state.members} canApprove={activeAdmin.role === "super_admin"} />}
+          {activeTab === "Finance" && <TransactionManagementTable transactions={filteredTransactions} members={filteredMembers} />}
           {activeTab === "Catalog" && <CatalogAdmin products={state.products} />}
           {activeTab === "Staff" && <StaffPanel admins={state.admins} />}
           {activeTab === "Account" && <AccountPanel account={state.account} />}

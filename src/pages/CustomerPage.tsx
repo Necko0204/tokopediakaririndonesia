@@ -37,15 +37,12 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
     }
   }, [ready, state.members]);
 
-  // Get active order (any non-completed order for this member)
   const activeOrder = currentMember 
     ? state.orders.find((order) => 
         order.member === currentMember.username && 
         !["completed", "diserahkan"].includes(order.status)
       ) 
     : null;
-
-  const assignedProduct = activeOrder ? state.products.find((product) => product.code === activeOrder.productCode) : undefined;
 
   const notifications = useMemo<CustomerNotification[]>(() => {
     if (!currentMember) return [];
@@ -123,7 +120,6 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
 
     setIsSubmittingOrder(true);
     try {
-      // Update order status to waiting_shipment
       dispatch({
         type: "updateOrder",
         payload: {
@@ -163,7 +159,6 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
     );
   }
 
-  // Show empty state if no data
   if (state.members.length === 0) {
     return (
       <main className="min-h-screen bg-[#f4f6f5] pb-24 text-ink flex items-center justify-center">
@@ -219,6 +214,7 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
               order={activeOrder}
               products={state.products}
               memberBalance={currentMember?.balance ?? 0}
+              member={currentMember}
               onAcceptTask={handleAcceptTask}
               onSubmitOrder={handleSubmitOrder}
               onTopUp={() => requireLogin(() => setActiveModal("topup"))}

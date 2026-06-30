@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import AdminLoginPage from "./pages/AdminLoginPage";
 import AdminPage from "./pages/AdminPage";
 import CustomerPage from "./pages/CustomerPage";
+import CustomerServicePage from "./pages/CustomerServicePage";
 import LoginPage from "./pages/LoginPage";
 import ProfilePage from "./pages/ProfilePage";
 import RegisterPage from "./pages/RegisterPage";
@@ -30,6 +31,8 @@ function App() {
         path.startsWith("/admin/login") ? <AdminLoginPage navigate={navigate} /> : <AdminPage navigate={navigate} />
       ) : path.startsWith("/register") ? (
         <RegisterPage navigate={navigate} />
+      ) : path.startsWith("/service") ? (
+        <CustomerServicePage navigate={navigate} />
       ) : path.startsWith("/login") ? (
         <LoginPage navigate={navigate} />
       ) : path.startsWith("/profile") ? (
