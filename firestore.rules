@@ -179,7 +179,8 @@ service cloud.firestore {
         'createdAt',
         'senderName',
         'proofName',
-        'proofType'
+        'proofType',
+        'proofDataUrl'
       ])
       && isString(request.resource.data.id)
       && isString(request.resource.data.requestId)
@@ -193,12 +194,14 @@ service cloud.firestore {
       && isOptionalString(request.resource.data.senderName)
       && isOptionalString(request.resource.data.proofName)
       && isOptionalString(request.resource.data.proofType)
+      && isOptionalString(request.resource.data.proofDataUrl)
       && (
         request.resource.data.type == 'withdrawal'
         || (
           isString(request.resource.data.senderName)
           && isString(request.resource.data.proofName)
           && isString(request.resource.data.proofType)
+          && isString(request.resource.data.proofDataUrl)
         )
       );
     }

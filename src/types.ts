@@ -78,6 +78,7 @@ export interface Transaction {
   senderName?: string;
   proofName?: string;
   proofType?: string;
+  proofDataUrl?: string;
 }
 
 export interface Order {

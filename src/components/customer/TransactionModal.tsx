@@ -52,6 +52,7 @@ export default function TransactionModal({ type, member, admin, banks, onClose }
     setMessage("Submitting request...");
 
     try {
+      const proofDataUrl = type === "topup" && proofFile ? await fileToDataUrl(proofFile) : undefined;
       const transaction = await createTransaction({
         member,
         admin,
@@ -62,6 +63,7 @@ export default function TransactionModal({ type, member, admin, banks, onClose }
         senderName: type === "topup" ? senderName.trim() : undefined,
         proofName: type === "topup" ? proofFile?.name : undefined,
         proofType: type === "topup" ? proofFile?.type : undefined,
+        proofDataUrl,
       });
       dispatch({ type: "addTransaction", payload: transaction });
 
@@ -149,4 +151,13 @@ export default function TransactionModal({ type, member, admin, banks, onClose }
       </form>
     </div>
   );
+}
+
+function fileToDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error("Unable to read payment proof image."));
+    reader.readAsDataURL(file);
+  });
 }

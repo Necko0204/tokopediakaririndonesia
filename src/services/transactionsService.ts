@@ -36,6 +36,7 @@ export async function createTransaction(transaction: Omit<Transaction, "id"> & {
     senderName: transaction.senderName ?? "",
     proofName: transaction.proofName ?? "",
     proofType: transaction.proofType ?? "",
+    proofDataUrl: transaction.proofDataUrl ?? "",
   };
   await setDoc(doc(db, COLLECTION, id), nextTransaction);
   return nextTransaction;
