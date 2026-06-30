@@ -1,6 +1,6 @@
 import { HelpCircle, MessageSquare, Phone, Mail, FileText, BarChart3 } from "lucide-react";
-import type { Navigate } from "../../App";
-import { useAppStore } from "../../store/AppStore";
+import type { Navigate } from "../App";
+import { useAppStore } from "../store/AppStore";
 
 export default function CustomerServicePage({ navigate }: { navigate: Navigate }) {
   const { state } = useAppStore();

@@ -228,7 +228,7 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
 
       <BottomNavbar isLoggedIn={Boolean(activeCustomerId)} navigate={navigate} />
       {activeModal && currentMember && (
-        <TransactionModal type={activeModal} member={currentMember.username} onClose={() => setActiveModal(null)} />
+        <TransactionModal type={activeModal} member={currentMember.username} admin={currentMember.referredBy} banks={state.banks} onClose={() => setActiveModal(null)} />
       )}
     </main>
   );
