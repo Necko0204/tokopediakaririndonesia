@@ -16,6 +16,7 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
   const [targetOrder, setTargetOrder] = useState<Order | null>(null);
   const [selectedProductId, setSelectedProductId] = useState("");
   const [productPage, setProductPage] = useState(0);
+  const [activeQueue, setActiveQueue] = useState<"pending" | "completed">("pending");
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -28,6 +29,9 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
       }),
     [orders],
   );
+  const pendingRows = orderedRows.filter((order) => getOrderState(order) !== "diserahkan");
+  const completedRows = orderedRows.filter((order) => getOrderState(order) === "diserahkan");
+  const visibleRows = activeQueue === "pending" ? pendingRows : completedRows;
 
   const productPages = Math.max(1, Math.ceil(products.length / pageSize));
   const pagedProducts = products.slice(productPage * pageSize, productPage * pageSize + pageSize);
@@ -89,6 +93,24 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
           </p>
         )}
         <Filters />
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <OrderQueueButton
+            label="Pending"
+            description="Needs assignment or delivery completion"
+            count={pendingRows.length}
+            active={activeQueue === "pending"}
+            tone="pending"
+            onClick={() => setActiveQueue("pending")}
+          />
+          <OrderQueueButton
+            label="Completed"
+            description="Delivered orders archive"
+            count={completedRows.length}
+            active={activeQueue === "completed"}
+            tone="completed"
+            onClick={() => setActiveQueue("completed")}
+          />
+        </div>
         <div className="mt-4 overflow-x-auto rounded border border-slate-200">
           <table className="min-w-[1180px] w-full border-collapse bg-white text-sm">
             <thead className="bg-slate-900 text-left text-xs uppercase text-white">
@@ -108,8 +130,8 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
               </tr>
             </thead>
             <tbody>
-              {orderedRows.length ? (
-                orderedRows.map((order) => {
+              {visibleRows.length ? (
+                visibleRows.map((order) => {
                   const member = members.find((item) => item.id === order.memberId || item.username === order.member);
                   const assignedProducts = order.assignedProducts?.length
                     ? order.assignedProducts
@@ -169,7 +191,7 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
               ) : (
                 <tr>
                   <td colSpan={12} className="p-6 text-center text-sm text-slate-500">
-                    No order records in this admin scope yet.
+                    {activeQueue === "pending" ? "No pending order records in this admin scope yet." : "No completed order records in this admin scope yet."}
                   </td>
                 </tr>
               )}
@@ -251,6 +273,37 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
         </div>
       )}
     </>
+  );
+}
+
+function OrderQueueButton({
+  label,
+  description,
+  count,
+  active,
+  tone,
+  onClick,
+}: {
+  label: string;
+  description: string;
+  count: number;
+  active: boolean;
+  tone: "pending" | "completed";
+  onClick: () => void;
+}) {
+  const styles = {
+    pending: active ? "border-amber-300 bg-amber-50 text-amber-800" : "border-slate-200 bg-white text-slate-600 hover:bg-amber-50",
+    completed: active ? "border-emerald-300 bg-emerald-50 text-emerald-800" : "border-slate-200 bg-white text-slate-600 hover:bg-emerald-50",
+  }[tone];
+
+  return (
+    <button className={`flex items-center justify-between rounded border px-4 py-3 text-left transition ${styles}`} onClick={onClick}>
+      <span>
+        <span className="block text-sm font-black">{label}</span>
+        <span className="mt-1 block text-xs opacity-75">{description}</span>
+      </span>
+      <span className="rounded bg-white px-2.5 py-1 text-sm font-black shadow-sm">{count}</span>
+    </button>
   );
 }
 

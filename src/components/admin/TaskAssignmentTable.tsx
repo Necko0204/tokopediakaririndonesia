@@ -1,11 +1,12 @@
-import { Plus } from "lucide-react";
-import { useState } from "react";
+import { Archive, CheckCircle2, Clock3, PackageSearch, Plus, Search } from "lucide-react";
+import { useMemo, useState } from "react";
 import { Field, inputClass, Panel } from "../common";
 import { formatRupiah, shortDate } from "../../utils";
 import { useAppStore } from "../../store/AppStore";
 import type { Member, Order, Product } from "../../types";
 import { assignOrderProducts } from "../../services/ordersService";
 import { getOrderCode } from "../../services/orderCode";
+import { getOrderState, getOrderStateLabel, type OrderState } from "../../services/orderStateService";
 
 interface TaskAssignmentTableProps {
   orders: Order[];
@@ -20,9 +21,38 @@ export default function TaskAssignmentTable({ orders, members, products }: TaskA
   const [selectedQuantities, setSelectedQuantities] = useState<Record<string, number>>({});
   const [isAssigning, setIsAssigning] = useState(false);
   const [message, setMessage] = useState("");
+  const [activeQueue, setActiveQueue] = useState<"action" | "progress" | "archive">("action");
+  const [query, setQuery] = useState("");
 
   // Filter orders that are waiting for assignment
   const waitingAssignmentOrders = orders.filter((order) => order.status === "waiting_assignment" || order.status === "waiting");
+  const queueCounts = useMemo(() => getQueueCounts(orders), [orders]);
+  const visibleOrders = useMemo(() => {
+    return orders
+      .filter((order) => {
+        const state = getOrderState(order);
+        if (activeQueue === "action") return state === "waiting_assignment";
+        if (activeQueue === "progress") return state === "product_assigned" || state === "waiting_shipment" || state === "belum_diserahkan";
+        return state === "diserahkan";
+      })
+      .filter((order) => {
+        const search = query.trim().toLowerCase();
+        if (!search) return true;
+        const member = members.find((item) => item.username === order.member);
+        return [
+          order.member,
+          member?.phone,
+          getOrderCode(order),
+          order.productName,
+          order.productCode,
+          order.status,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase()
+          .includes(search);
+      });
+  }, [activeQueue, members, orders, query]);
 
   const handleAssignProducts = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,6 +125,30 @@ export default function TaskAssignmentTable({ orders, members, products }: TaskA
         </button>
       }
     >
+      <div className="mb-5 grid gap-3 md:grid-cols-3">
+        <QueueSummary
+          icon={<Clock3 size={18} />}
+          label="Action needed"
+          value={queueCounts.action}
+          active={activeQueue === "action"}
+          onClick={() => setActiveQueue("action")}
+        />
+        <QueueSummary
+          icon={<PackageSearch size={18} />}
+          label="In progress"
+          value={queueCounts.progress}
+          active={activeQueue === "progress"}
+          onClick={() => setActiveQueue("progress")}
+        />
+        <QueueSummary
+          icon={<Archive size={18} />}
+          label="Archive"
+          value={queueCounts.archive}
+          active={activeQueue === "archive"}
+          onClick={() => setActiveQueue("archive")}
+        />
+      </div>
+
       {showAssignForm && (
         <form onSubmit={handleAssignProducts} className="mb-6 rounded bg-slate-50 p-4 grid gap-4">
           <div className="grid gap-4 md:grid-cols-2">
@@ -196,11 +250,30 @@ export default function TaskAssignmentTable({ orders, members, products }: TaskA
         </form>
       )}
 
-      <div className="grid gap-4">
-        {orders.length === 0 ? (
-          <p className="rounded bg-slate-50 p-4 text-sm text-slate-500">No task assignments yet.</p>
+      <div className="mb-4 flex flex-col gap-3 rounded border border-slate-200 bg-slate-50 p-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-sm font-black text-slate-900">{queueTitle(activeQueue)}</p>
+          <p className="text-xs text-slate-500">{queueDescription(activeQueue)}</p>
+        </div>
+        <div className="relative w-full sm:max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+          <input
+            className="h-10 w-full rounded border border-slate-200 bg-white pl-9 pr-3 text-sm outline-none focus:border-forest"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search task, member, product"
+          />
+        </div>
+      </div>
+
+      <div className="max-h-[640px] overflow-y-auto pr-1">
+        <div className="grid gap-3">
+        {visibleOrders.length === 0 ? (
+          <p className="rounded border border-dashed border-slate-200 bg-slate-50 p-6 text-center text-sm text-slate-500">
+            No task records in this queue.
+          </p>
         ) : (
-          orders.map((order) => {
+          visibleOrders.map((order) => {
             const member = members.find((m) => m.username === order.member);
             const assignedProducts = order.assignedProducts?.length
               ? order.assignedProducts
@@ -211,44 +284,100 @@ export default function TaskAssignmentTable({ orders, members, products }: TaskA
             return (
               <div
                 key={order.id}
-                className="rounded border border-slate-200 p-4 grid gap-4 md:grid-cols-[auto_1fr_auto_auto_auto] md:items-center"
+                className="rounded border border-slate-200 bg-white p-4 transition hover:border-forest/30 hover:shadow-sm"
               >
-                <div className="md:col-span-1">
-                  <p className="text-xs text-slate-500 uppercase">Member</p>
-                  <p className="font-bold">{member?.username || "Unknown"}</p>
-                  <p className="text-xs text-slate-600">{getOrderCode(order)}</p>
-                </div>
+                <div className="grid gap-4 lg:grid-cols-[1.1fr_1.4fr_0.9fr_0.9fr] lg:items-center">
+                  <div>
+                    <p className="text-xs font-black uppercase text-slate-500">Member</p>
+                    <p className="mt-1 font-black text-slate-900">{member?.username || order.member || "Unknown"}</p>
+                    <p className="mt-1 break-words text-xs font-semibold text-slate-500">{getOrderCode(order)}</p>
+                  </div>
 
-                <div>
-                  <p className="text-xs text-slate-500 uppercase">Product</p>
-                  <p className="font-bold">{assignedProducts.length ? `${assignedProducts.length} product(s)` : "Pending..."}</p>
-                  <p className="text-xs text-slate-600">
-                    {assignedProducts.map((product) => `${product.code} x${product.quantity}`).join(", ") || "-"}
-                  </p>
-                </div>
+                  <div>
+                    <p className="text-xs font-black uppercase text-slate-500">Product</p>
+                    <p className="mt-1 font-black text-slate-900">{assignedProducts.length ? `${assignedProducts.length} product(s)` : "Pending assignment"}</p>
+                    <p className="mt-1 break-words text-xs text-slate-600">
+                      {assignedProducts.map((product) => `${product.code} x${product.quantity}`).join(", ") || "No product assigned yet"}
+                    </p>
+                  </div>
 
-                <div>
-                  <p className="text-xs text-slate-500 uppercase">Amount</p>
-                  <p className="font-bold">{formatRupiah(order.value || 0)}</p>
-                  <p className="text-xs text-emerald-700">Comm: {formatRupiah(order.commission || 0)}</p>
-                </div>
+                  <div>
+                    <p className="text-xs font-black uppercase text-slate-500">Amount</p>
+                    <p className="mt-1 font-black">{formatRupiah(order.value || 0)}</p>
+                    <p className="text-xs text-emerald-700">Comm: {formatRupiah(order.commission || 0)}</p>
+                  </div>
 
-                <div>
-                  <p className="text-xs text-slate-500 uppercase">Status</p>
-                  <span className={`inline-block px-2 py-1 rounded text-xs font-bold ${getStatusColor(order.status)}`}>
-                    {order.status}
-                  </span>
-                </div>
-
-                <div className="text-right">
-                  <p className="text-xs text-slate-500 uppercase">Date</p>
-                  <p className="text-sm font-bold">{shortDate(order.createdAt)}</p>
+                  <div className="lg:text-right">
+                    <p className="text-xs font-black uppercase text-slate-500">Date</p>
+                    <p className="mt-1 text-sm font-black">{shortDate(order.createdAt)}</p>
+                    <span className={`mt-2 inline-flex rounded px-2 py-1 text-xs font-black ${getStatusColor(order.status)}`}>
+                      {getOrderStateLabel(getOrderState(order))}
+                    </span>
+                  </div>
                 </div>
               </div>
             );
           })
         )}
+        </div>
       </div>
     </Panel>
+  );
+}
+
+function getQueueCounts(orders: Order[]) {
+  return orders.reduce(
+    (totals, order) => {
+      const state = getOrderState(order);
+      if (state === "waiting_assignment") totals.action += 1;
+      else if (state === "diserahkan") totals.archive += 1;
+      else totals.progress += 1;
+      return totals;
+    },
+    { action: 0, progress: 0, archive: 0 },
+  );
+}
+
+function queueTitle(queue: "action" | "progress" | "archive") {
+  if (queue === "action") return "Action needed";
+  if (queue === "progress") return "In progress";
+  return "Archive";
+}
+
+function queueDescription(queue: "action" | "progress" | "archive") {
+  if (queue === "action") return "Tasks waiting for an admin to assign products.";
+  if (queue === "progress") return "Assigned tasks currently being handled by customers.";
+  return "Completed and delivered task records.";
+}
+
+function QueueSummary({
+  icon,
+  label,
+  value,
+  active,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: number;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      className={`rounded border p-4 text-left transition ${
+        active ? "border-forest bg-mint shadow-sm" : "border-slate-200 bg-white hover:border-forest/40 hover:bg-slate-50"
+      }`}
+      onClick={onClick}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <span className={`grid h-10 w-10 place-items-center rounded ${active ? "bg-forest text-white" : "bg-mint text-forest"}`}>
+          {icon}
+        </span>
+        {active && <CheckCircle2 size={18} className="text-forest" />}
+      </div>
+      <p className="mt-4 text-xs font-black uppercase text-slate-500">{label}</p>
+      <p className="mt-1 text-2xl font-black text-slate-900">{value}</p>
+    </button>
   );
 }

@@ -13,7 +13,9 @@ export default function DepositDestination({ banks }: { banks: BankPlacement[] }
               <p className="text-xs font-bold uppercase text-slate-500">Bank name</p>
               <p className="font-bold">{bank.bank}</p>
               <p className="mt-3 text-xs font-bold uppercase text-slate-500">Account number</p>
-              <p className="text-xl font-black">{bank.accountNumber}</p>
+              <p className="rounded bg-slate-50 px-3 py-2 text-sm font-bold text-slate-500">
+                Available after opening a Top Up request
+              </p>
               <p className="mt-3 text-xs font-bold uppercase text-slate-500">Account owner name</p>
               <p className="text-sm font-semibold text-slate-700">{bank.accountName}</p>
             </div>

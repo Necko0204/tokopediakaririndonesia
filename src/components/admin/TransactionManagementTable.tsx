@@ -6,6 +6,8 @@ import { useAppStore } from "../../store/AppStore";
 import { approveTransactionRequest } from "../../services/transactionsService";
 import type { Member, Transaction } from "../../types";
 
+type RequestStatusView = Transaction["status"];
+
 export default function TransactionManagementTable({
   transactions,
   members,
@@ -130,7 +132,11 @@ function RequestTable({
   onApprove: (transaction: Transaction) => void;
   onReject: (transaction: Transaction) => void;
 }) {
+  const [statusView, setStatusView] = useState<RequestStatusView>("pending");
   const headerTone = tone === "topup" ? "from-emerald-950 to-slate-900" : "from-slate-950 to-slate-800";
+  const statusCounts = getStatusCounts(transactions);
+  const visibleTransactions = transactions.filter((transaction) => transaction.status === statusView);
+  const statusEmptyText = statusView === "pending" ? emptyText : `No ${statusView} ${tone === "topup" ? "top-up" : "withdrawal"} requests found.`;
 
   return (
     <section className="overflow-hidden rounded border border-slate-200 bg-white shadow-sm">
@@ -142,6 +148,30 @@ function RequestTable({
         <span className="rounded bg-white px-3 py-1 text-xs font-black text-slate-600 shadow-sm">
           {transactions.length} records
         </span>
+      </div>
+
+      <div className="grid gap-2 border-b border-slate-100 bg-white p-3 sm:grid-cols-3">
+        <StatusQueueButton
+          label="Pending"
+          count={statusCounts.pending}
+          active={statusView === "pending"}
+          tone="pending"
+          onClick={() => setStatusView("pending")}
+        />
+        <StatusQueueButton
+          label="Approved"
+          count={statusCounts.approved}
+          active={statusView === "approved"}
+          tone="approved"
+          onClick={() => setStatusView("approved")}
+        />
+        <StatusQueueButton
+          label="Rejected"
+          count={statusCounts.rejected}
+          active={statusView === "rejected"}
+          tone="rejected"
+          onClick={() => setStatusView("rejected")}
+        />
       </div>
 
       <div className="max-h-[460px] overflow-auto">
@@ -159,8 +189,8 @@ function RequestTable({
             </tr>
           </thead>
           <tbody>
-            {transactions.length ? (
-              transactions.map((transaction) => {
+            {visibleTransactions.length ? (
+              visibleTransactions.map((transaction) => {
                 const member = members.find((item) => item.username === transaction.member);
                 const isPending = transaction.status === "pending";
                 const isProcessing = isProcessingId === transaction.id;
@@ -225,7 +255,7 @@ function RequestTable({
             ) : (
               <tr>
                 <td colSpan={8} className="p-6 text-center text-sm text-slate-500">
-                  {emptyText}
+                  {statusEmptyText}
                 </td>
               </tr>
             )}
@@ -233,6 +263,46 @@ function RequestTable({
         </table>
       </div>
     </section>
+  );
+}
+
+function getStatusCounts(transactions: Transaction[]) {
+  return transactions.reduce(
+    (totals, transaction) => {
+      totals[transaction.status] += 1;
+      return totals;
+    },
+    { pending: 0, approved: 0, rejected: 0 } satisfies Record<Transaction["status"], number>,
+  );
+}
+
+function StatusQueueButton({
+  label,
+  count,
+  active,
+  tone,
+  onClick,
+}: {
+  label: string;
+  count: number;
+  active: boolean;
+  tone: Transaction["status"];
+  onClick: () => void;
+}) {
+  const styles: Record<Transaction["status"], string> = {
+    pending: active ? "border-amber-300 bg-amber-50 text-amber-800" : "border-slate-200 bg-white text-slate-600 hover:bg-amber-50",
+    approved: active ? "border-emerald-300 bg-emerald-50 text-emerald-800" : "border-slate-200 bg-white text-slate-600 hover:bg-emerald-50",
+    rejected: active ? "border-rose-300 bg-rose-50 text-rose-800" : "border-slate-200 bg-white text-slate-600 hover:bg-rose-50",
+  };
+
+  return (
+    <button className={`flex items-center justify-between rounded border px-3 py-3 text-left transition ${styles[tone]}`} onClick={onClick}>
+      <span>
+        <span className="block text-xs font-black uppercase tracking-wide">{label}</span>
+        <span className="mt-1 block text-xs opacity-75">{label === "Pending" ? "Needs review" : "Archived records"}</span>
+      </span>
+      <span className="rounded bg-white px-2 py-1 text-sm font-black shadow-sm">{count}</span>
+    </button>
   );
 }
 

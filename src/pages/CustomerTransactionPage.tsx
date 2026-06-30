@@ -1,4 +1,4 @@
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, CreditCard, Wallet } from "lucide-react";
 import type { Navigate } from "../App";
 import BottomNavbar from "../components/customer/BottomNavbar";
 import TransactionModal from "../components/customer/TransactionModal";
@@ -42,23 +42,33 @@ export default function CustomerTransactionPage({ navigate, type }: { navigate: 
         </div>
       </header>
 
-      <section className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
-        <div className="rounded bg-white p-6 shadow-panel">
-          <p className="text-xs font-black uppercase tracking-wide text-forest">{type === "topup" ? "Top Up" : "Withdraw"}</p>
-          <h1 className="mt-2 text-2xl font-black">{type === "topup" ? "Create a Top Up Request" : "Create a Withdrawal Request"}</h1>
-          <p className="mt-2 text-sm leading-6 text-slate-500">
-            Complete the form in the request window. Your request will be submitted as pending for admin review.
-          </p>
+      <section className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
+        <div className="mb-5 overflow-hidden rounded bg-white shadow-panel">
+          <div className={`p-6 text-white ${type === "topup" ? "bg-gradient-to-r from-forest to-emerald-500" : "bg-gradient-to-r from-slate-900 to-coral"}`}>
+            <div className="flex items-start gap-4">
+              <div className="grid h-12 w-12 shrink-0 place-items-center rounded bg-white/15">
+                {type === "topup" ? <CreditCard size={24} /> : <Wallet size={24} />}
+              </div>
+              <div>
+                <p className="text-xs font-black uppercase tracking-wide text-white/70">{type === "topup" ? "Top Up" : "Withdraw"}</p>
+                <h1 className="mt-1 text-3xl font-black">{type === "topup" ? "Create a Top Up Request" : "Create a Withdrawal Request"}</h1>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-white/80">
+                  Submit the amount and required details. Admin approval is required before your account balance changes.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
-      </section>
 
-      <TransactionModal
-        type={type}
-        member={member.username}
-        admin={member.referredBy}
-        banks={state.banks}
-        onClose={() => navigate("/profile")}
-      />
+        <TransactionModal
+          type={type}
+          member={member.username}
+          admin={member.referredBy}
+          banks={state.banks}
+          onClose={() => navigate("/profile")}
+          variant="page"
+        />
+      </section>
       <BottomNavbar isLoggedIn navigate={navigate} active="profile" />
     </main>
   );

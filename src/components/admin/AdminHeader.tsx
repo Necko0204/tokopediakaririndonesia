@@ -1,10 +1,28 @@
-import { Bell, LogOut } from "lucide-react";
+import { Bell, CheckCircle2, Clock, LogOut, PackagePlus, UserPlus, WalletCards } from "lucide-react";
 import type { Navigate } from "../../App";
 import { adminTabIcon } from "../../constants";
 import { roleLabel } from "../../services/adminSession";
 import type { StaffAdmin } from "../../types";
 
-export default function AdminHeader({ activeAdmin, navigate, onLogout }: { activeAdmin: StaffAdmin; navigate: Navigate; onLogout: () => void }) {
+export interface AdminNotification {
+  id: string;
+  title: string;
+  text: string;
+  time?: string;
+  tone: "registration" | "topup" | "withdrawal" | "order" | "completed";
+}
+
+export default function AdminHeader({
+  activeAdmin,
+  notifications,
+  navigate,
+  onLogout,
+}: {
+  activeAdmin: StaffAdmin;
+  notifications: AdminNotification[];
+  navigate: Navigate;
+  onLogout: () => void;
+}) {
   return (
     <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
@@ -19,9 +37,44 @@ export default function AdminHeader({ activeAdmin, navigate, onLogout }: { activ
           <button className="hidden rounded border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 sm:block" onClick={() => navigate("/")}>
             Customer store
           </button>
-          <button className="grid h-10 w-10 place-items-center rounded border border-slate-200 text-slate-600" aria-label="Notifications">
-            <Bell size={18} />
-          </button>
+          <div className="group relative">
+            <button className="relative grid h-10 w-10 place-items-center rounded border border-slate-200 text-slate-600 hover:bg-slate-50" aria-label="Notifications">
+              <Bell size={18} />
+              {notifications.length > 0 && (
+                <span className="absolute -right-1 -top-1 grid min-h-5 min-w-5 place-items-center rounded-full bg-coral px-1 text-[10px] font-black text-white">
+                  {notifications.length}
+                </span>
+              )}
+            </button>
+            <div className="invisible absolute right-0 top-12 z-50 w-[min(360px,calc(100vw-2rem))] translate-y-2 rounded border border-slate-200 bg-white opacity-0 shadow-panel transition group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
+              <div className="border-b border-slate-100 px-4 py-3">
+                <p className="text-sm font-black text-slate-900">Notifications</p>
+                <p className="text-xs text-slate-500">{notifications.length ? "Latest admin activity" : "No notifications currently"}</p>
+              </div>
+              <div className="max-h-[360px] overflow-y-auto p-2">
+                {notifications.length ? (
+                  notifications.map((notification) => (
+                    <div key={notification.id} className="flex gap-3 rounded px-3 py-3 hover:bg-slate-50">
+                      <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full ${notificationToneClass(notification.tone)}`}>
+                        {notificationIcon(notification.tone)}
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block text-sm font-black text-slate-800">{notification.title}</span>
+                        <span className="mt-0.5 block text-xs leading-5 text-slate-500">{notification.text}</span>
+                        {notification.time && <span className="mt-1 block text-[11px] font-bold text-slate-400">{notification.time}</span>}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="grid place-items-center px-4 py-8 text-center">
+                    <Bell size={22} className="text-slate-300" />
+                    <p className="mt-3 text-sm font-bold text-slate-700">No notifications currently</p>
+                    <p className="mt-1 text-xs text-slate-500">New registrations, requests, and orders will show here.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
           <div className="hidden text-right sm:block">
             <p className="text-sm font-bold">{activeAdmin.name}</p>
             <p className="text-xs text-slate-500">{roleLabel(activeAdmin.role)}</p>
@@ -34,4 +87,23 @@ export default function AdminHeader({ activeAdmin, navigate, onLogout }: { activ
       </div>
     </header>
   );
+}
+
+function notificationToneClass(tone: AdminNotification["tone"]) {
+  const classes: Record<AdminNotification["tone"], string> = {
+    registration: "bg-emerald-50 text-emerald-700",
+    topup: "bg-mint text-forest",
+    withdrawal: "bg-rose-50 text-rose-700",
+    order: "bg-amber-50 text-amber-700",
+    completed: "bg-blue-50 text-blue-700",
+  };
+  return classes[tone];
+}
+
+function notificationIcon(tone: AdminNotification["tone"]) {
+  if (tone === "registration") return <UserPlus size={17} />;
+  if (tone === "topup") return <WalletCards size={17} />;
+  if (tone === "withdrawal") return <Clock size={17} />;
+  if (tone === "completed") return <CheckCircle2 size={17} />;
+  return <PackagePlus size={17} />;
 }

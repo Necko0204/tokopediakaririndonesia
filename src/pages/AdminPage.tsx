@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Navigate } from "../App";
 import AccountPanel from "../components/admin/AccountPanel";
-import AdminHeader from "../components/admin/AdminHeader";
+import AdminHeader, { type AdminNotification } from "../components/admin/AdminHeader";
 import AdminSidebar from "../components/admin/AdminSidebar";
 import AdminToolbar from "../components/admin/AdminToolbar";
 import CatalogAdmin from "../components/admin/CatalogAdmin";
@@ -14,6 +14,7 @@ import StaffPanel from "../components/admin/StaffPanel";
 import type { AdminTab } from "../constants";
 import { allowedTabsForRole, clearActiveAdminId, getActiveAdmin } from "../services/adminSession";
 import { useAppStore } from "../store/AppStore";
+import type { AppState, Member, StaffAdmin, Transaction } from "../types";
 
 export default function AdminPage({ navigate }: { navigate: Navigate }) {
   const { state, persistence, ready } = useAppStore();
@@ -37,8 +38,33 @@ export default function AdminPage({ navigate }: { navigate: Navigate }) {
     return activeAdmin.role === "super_admin" ? state.admins : state.admins.filter((admin) => admin.id === activeAdmin.id);
   }, [activeAdmin, state.admins]);
 
+  const selectedAdminScope = useMemo(() => {
+    return selectedAdmin === "All admins" ? visibleAdmins : visibleAdmins.filter((admin) => admin.name === selectedAdmin);
+  }, [selectedAdmin, visibleAdmins]);
+
+  const scopedMembersForOverview = useMemo(() => {
+    return state.members.filter((member) => selectedAdminScope.some((admin) => memberBelongsToAdmin(member, admin)));
+  }, [selectedAdminScope, state.members]);
+
+  const scopedTransactionsForOverview = useMemo(() => {
+    return state.transactions.filter((transaction) => selectedAdminScope.some((admin) => transactionBelongsToAdmin(transaction, admin, state.members)));
+  }, [selectedAdminScope, state.members, state.transactions]);
+
+  const overviewAdmins = useMemo(() => {
+    return selectedAdminScope.map((admin) => buildAdminMetrics(admin, state.members, state.transactions));
+  }, [selectedAdminScope, state.members, state.transactions]);
+
+  const overviewState = useMemo<AppState>(() => {
+    return {
+      ...state,
+      admins: overviewAdmins,
+      members: scopedMembersForOverview,
+      transactions: scopedTransactionsForOverview,
+    };
+  }, [overviewAdmins, scopedMembersForOverview, scopedTransactionsForOverview, state]);
+
   const totals = useMemo(() => {
-    const adminScope = selectedAdmin === "All admins" ? visibleAdmins : visibleAdmins.filter((admin) => admin.name === selectedAdmin);
+    const adminScope = overviewAdmins;
     return {
       registrations: adminScope.reduce((sum, admin) => sum + admin.registrations, 0),
       todayDeposits: adminScope.reduce((sum, admin) => sum + admin.todayDeposits, 0),
@@ -46,7 +72,7 @@ export default function AdminPage({ navigate }: { navigate: Navigate }) {
       todayWithdrawals: adminScope.reduce((sum, admin) => sum + admin.todayWithdrawals, 0),
       monthWithdrawals: adminScope.reduce((sum, admin) => sum + admin.monthWithdrawals, 0),
     };
-  }, [selectedAdmin, visibleAdmins]);
+  }, [overviewAdmins]);
 
   const filteredMembers = state.members.filter((member) => {
     const adminMatch =
@@ -71,9 +97,14 @@ export default function AdminPage({ navigate }: { navigate: Navigate }) {
   });
 
   const filteredTransactions = state.transactions.filter((transaction) => {
+    const adminMatch = scopedAdminNames.some((adminName) => transaction.admin === adminName || state.members.find((member) => member.username === transaction.member)?.referredBy === adminName);
     const textMatch = `${transaction.requestId ?? ""} ${transaction.member} ${transaction.admin} ${transaction.senderName ?? ""} ${transaction.type} ${transaction.status}`.toLowerCase().includes(query.toLowerCase());
-    return textMatch;
+    return adminMatch && textMatch;
   });
+
+  const adminNotifications = useMemo(() => {
+    return buildAdminNotifications(scopedMembersForOverview, scopedTransactionsForOverview, filteredOrders);
+  }, [filteredOrders, scopedMembersForOverview, scopedTransactionsForOverview]);
 
   const selectedAdminCode =
     selectedAdmin === "All admins"
@@ -100,6 +131,7 @@ export default function AdminPage({ navigate }: { navigate: Navigate }) {
     <main className="min-h-screen bg-cloud text-ink">
       <AdminHeader
         activeAdmin={activeAdmin}
+        notifications={adminNotifications}
         navigate={navigate}
         onLogout={() => {
           clearActiveAdminId();
@@ -118,7 +150,7 @@ export default function AdminPage({ navigate }: { navigate: Navigate }) {
             onSelectedAdminChange={setSelectedAdmin}
             onQueryChange={setQuery}
           />
-          {activeTab === "Overview" && <OverviewPanel state={state} totals={totals} canManageBanks={activeAdmin.role === "super_admin"} />}
+          {activeTab === "Overview" && <OverviewPanel state={overviewState} totals={totals} canManageBanks={activeAdmin.role === "super_admin"} />}
           {activeTab === "Members" && <MemberTable members={filteredMembers} />}
           {activeTab === "Tasks" && <TaskAssignmentTable orders={filteredOrders} members={filteredMembers} products={state.products} />}
           {activeTab === "Orders" && <OrderTable orders={filteredOrders} members={filteredMembers} products={state.products} />}
@@ -130,4 +162,115 @@ export default function AdminPage({ navigate }: { navigate: Navigate }) {
       </div>
     </main>
   );
+}
+
+function buildAdminMetrics(admin: StaffAdmin, members: Member[], transactions: Transaction[]): StaffAdmin {
+  const adminMembers = members.filter((member) => memberBelongsToAdmin(member, admin));
+  const adminTransactions = transactions.filter((transaction) => transactionBelongsToAdmin(transaction, admin, members));
+  const countedTransactions = adminTransactions.filter((transaction) => transaction.status !== "rejected");
+
+  return {
+    ...admin,
+    registrations: adminMembers.length,
+    todayDeposits: sumTransactions(countedTransactions, "topup", "today"),
+    monthDeposits: sumTransactions(countedTransactions, "topup", "month"),
+    todayWithdrawals: sumTransactions(countedTransactions, "withdrawal", "today"),
+    monthWithdrawals: sumTransactions(countedTransactions, "withdrawal", "month"),
+  };
+}
+
+function memberBelongsToAdmin(member: Member, admin: StaffAdmin) {
+  const codes = [admin.code, admin.adminCode, admin.invitationCode].filter(Boolean);
+  return member.referredBy === admin.name || codes.includes(member.invitationCode);
+}
+
+function transactionBelongsToAdmin(transaction: Transaction, admin: StaffAdmin, members: Member[]) {
+  const codes = [admin.code, admin.adminCode, admin.invitationCode].filter(Boolean);
+  if (transaction.admin === admin.name || codes.includes(transaction.admin)) return true;
+  const member = members.find((item) => item.username === transaction.member);
+  return member ? memberBelongsToAdmin(member, admin) : false;
+}
+
+function sumTransactions(transactions: Transaction[], type: Transaction["type"], period: "today" | "month") {
+  return transactions
+    .filter((transaction) => transaction.type === type && isInPeriod(transaction.createdAt, period))
+    .reduce((sum, transaction) => sum + transaction.amount, 0);
+}
+
+function isInPeriod(value: string, period: "today" | "month") {
+  const date = parseRecordDate(value);
+  if (!date) return false;
+
+  const now = new Date();
+  if (period === "today") {
+    return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth() && date.getDate() === now.getDate();
+  }
+
+  return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
+}
+
+function parseRecordDate(value: string) {
+  const parsed = new Date(value.replace(" ", "T"));
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function buildAdminNotifications(members: Member[], transactions: Transaction[], orders: AppState["orders"]): AdminNotification[] {
+  const registrationNotifications = members.map((member) => ({
+    id: `member-${member.id}`,
+    title: "New registration",
+    text: `${member.username} registered under ${member.referredBy || "admin scope"}.`,
+    time: member.lastLogin,
+    tone: "registration" as const,
+    sortTime: parseRecordDate(member.lastLogin)?.getTime() ?? 0,
+  }));
+
+  const transactionNotifications = transactions
+    .filter((transaction) => transaction.status === "pending")
+    .map((transaction) => ({
+      id: `transaction-${transaction.id}`,
+      title: transaction.type === "topup" ? "New Top Up request" : "New withdrawal request",
+      text: `${transaction.member} requested ${formatNotificationAmount(transaction.amount)}. Status: Pending.`,
+      time: transaction.createdAt,
+      tone: transaction.type === "topup" ? ("topup" as const) : ("withdrawal" as const),
+      sortTime: parseRecordDate(transaction.createdAt)?.getTime() ?? 0,
+    }));
+
+  const orderNotifications = orders
+    .filter((order) => getAdminOrderStatus(order) !== "completed")
+    .map((order) => ({
+      id: `order-${order.id}`,
+      title: getAdminOrderStatus(order) === "pending" ? "Order waiting assignment" : "Order in progress",
+      text: `${order.member} has ${order.productName ? order.productName : "an order task"} pending.`,
+      time: order.createdAt,
+      tone: "order" as const,
+      sortTime: parseRecordDate(order.createdAt)?.getTime() ?? 0,
+    }));
+
+  const completedOrderNotifications = orders
+    .filter((order) => getAdminOrderStatus(order) === "completed")
+    .map((order) => ({
+      id: `completed-order-${order.id}`,
+      title: "Order completed",
+      text: `${order.member} completed ${order.productName || "an order task"}.`,
+      time: order.completedAt ?? order.createdAt,
+      tone: "completed" as const,
+      sortTime: parseRecordDate(order.completedAt ?? order.createdAt)?.getTime() ?? 0,
+    }));
+
+  return [...registrationNotifications, ...transactionNotifications, ...orderNotifications, ...completedOrderNotifications]
+    .sort((left, right) => right.sortTime - left.sortTime)
+    .slice(0, 12)
+    .map(({ sortTime: _sortTime, ...notification }) => notification);
+}
+
+function getAdminOrderStatus(order: AppState["orders"][number]) {
+  return order.status === "diserahkan" || order.status === "completed" ? "completed" : "pending";
+}
+
+function formatNotificationAmount(value: number) {
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    maximumFractionDigits: 0,
+  }).format(value);
 }

@@ -2,6 +2,7 @@ import {
   ArrowLeft,
   Banknote,
   CreditCard,
+  ChevronRight,
   FileText,
   History,
   KeyRound,
@@ -23,6 +24,7 @@ import { useAppStore } from "../store/AppStore";
 import { formatRupiah, shortDate } from "../utils";
 
 const customerLogo = "/assets/customer-logo.jpeg";
+const workAccountBanner = "/assets/work-account-banner.png";
 const dailyOrderTarget = 15;
 
 export default function ProfilePage({ navigate }: { navigate: Navigate }) {
@@ -31,6 +33,7 @@ export default function ProfilePage({ navigate }: { navigate: Navigate }) {
   const [settingsMode, setSettingsMode] = useState<"account" | "withdrawal" | null>(null);
   const [newPassword, setNewPassword] = useState("");
   const [settingsMessage, setSettingsMessage] = useState("");
+  const [menuMessage, setMenuMessage] = useState("");
   const [isSavingSettings, setIsSavingSettings] = useState(false);
 
   const memberOrders = useMemo(() => {
@@ -112,12 +115,30 @@ export default function ProfilePage({ navigate }: { navigate: Navigate }) {
   };
 
   const menuItems = [
-    { label: "Loan", icon: <Banknote size={18} />, onClick: () => undefined },
-    { label: "Withdraw", icon: <Wallet size={18} />, onClick: () => navigate("/withdraw") },
-    { label: "Withdrawal Information", icon: <FileText size={18} />, onClick: () => scrollToSection("withdrawal-info") },
-    { label: "Withdrawal History", icon: <History size={18} />, onClick: () => scrollToSection("withdrawal-history") },
-    { label: "Top Up History", icon: <CreditCard size={18} />, onClick: () => scrollToSection("topup-history") },
-    { label: "Password", icon: <KeyRound size={18} />, onClick: () => scrollToSection("settings") },
+    {
+      label: "Loan",
+      description: "View current loan availability",
+      icon: <Banknote size={19} />,
+      onClick: () => {
+        setMenuMessage("Loan services are not available for this account yet.");
+        scrollToSection("loan-info");
+      },
+    },
+    { label: "Withdraw", description: "Create a withdrawal request", icon: <Wallet size={19} />, onClick: () => navigate("/withdraw") },
+    { label: "Withdrawal Information", description: "Review withdrawal rules", icon: <FileText size={19} />, onClick: () => scrollToSection("withdrawal-info") },
+    { label: "Withdrawal History", description: "Check past withdrawal requests", icon: <History size={19} />, onClick: () => scrollToSection("withdrawal-history") },
+    { label: "Top Up History", description: "Check past top-up requests", icon: <CreditCard size={19} />, onClick: () => scrollToSection("topup-history") },
+    {
+      label: "Password",
+      description: "Update account security",
+      icon: <KeyRound size={19} />,
+      onClick: () => {
+        setSettingsMode("account");
+        setNewPassword("");
+        setSettingsMessage("");
+        scrollToSection("settings");
+      },
+    },
   ];
 
   return (
@@ -136,6 +157,14 @@ export default function ProfilePage({ navigate }: { navigate: Navigate }) {
       </header>
 
       <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+        <div className="mb-5 overflow-hidden rounded bg-white shadow-panel">
+          <img
+            className="h-32 w-full object-cover sm:h-44 lg:h-56"
+            src={workAccountBanner}
+            alt="Tokopedia work account promotion"
+          />
+        </div>
+
         <div className="overflow-hidden rounded bg-gradient-to-br from-emerald-600 via-forest to-lime-500 p-5 text-white shadow-panel sm:p-6">
           <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
             <div className="min-w-0">
@@ -179,11 +208,27 @@ export default function ProfilePage({ navigate }: { navigate: Navigate }) {
             </div>
 
             <Panel title="Account menu">
+              {menuMessage && (
+                <div className="mb-4 flex items-start justify-between gap-3 rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-700">
+                  <span>{menuMessage}</span>
+                  <button className="text-amber-900" onClick={() => setMenuMessage("")}>
+                    Dismiss
+                  </button>
+                </div>
+              )}
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {menuItems.map((item) => (
-                  <button key={item.label} className="flex items-center gap-3 rounded border border-slate-200 bg-white px-4 py-3 text-left text-sm font-black text-slate-700 transition hover:border-forest hover:bg-mint" onClick={item.onClick}>
-                    <span className="grid h-10 w-10 place-items-center rounded bg-mint text-forest">{item.icon}</span>
-                    {item.label}
+                  <button
+                    key={item.label}
+                    className="group flex min-h-24 items-center gap-4 rounded border border-slate-200 bg-white p-4 text-left transition hover:-translate-y-0.5 hover:border-forest hover:bg-mint hover:shadow-panel"
+                    onClick={item.onClick}
+                  >
+                    <span className="grid h-12 w-12 shrink-0 place-items-center rounded bg-mint text-forest transition group-hover:bg-forest group-hover:text-white">{item.icon}</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-black text-slate-900">{item.label}</span>
+                      <span className="mt-1 block text-xs leading-5 text-slate-500">{item.description}</span>
+                    </span>
+                    <ChevronRight size={17} className="shrink-0 text-slate-300 transition group-hover:text-forest" />
                   </button>
                 ))}
               </div>
@@ -226,6 +271,14 @@ export default function ProfilePage({ navigate }: { navigate: Navigate }) {
               <ProfileRow label="Effective Balance" value={formatRupiah(effectiveBalance)} />
               <ProfileRow label="Frozen Balance" value={formatRupiah(frozenBalance)} />
             </Panel>
+
+            <div id="loan-info">
+              <Panel title="Loan">
+                <p className="text-sm leading-6 text-slate-600">
+                  Loan services are currently unavailable for this account. If this feature is enabled later, eligible loan details will appear here.
+                </p>
+              </Panel>
+            </div>
 
             <div id="withdrawal-info">
               <Panel title="Withdrawal Information">

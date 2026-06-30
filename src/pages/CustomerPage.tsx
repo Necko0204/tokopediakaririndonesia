@@ -220,6 +220,8 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
       />
       <CustomerHero
         balance={currentMember?.balance ?? 0}
+        username={currentMember?.username}
+        phone={currentMember?.phone}
         onTopUp={() => requireLogin(() => setActiveModal("topup"))}
         onWithdraw={() => requireLogin(() => setActiveModal("withdraw"))}
       />
@@ -235,7 +237,12 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
       )}
 
       <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
-        <StoreShortcutGrid navigate={navigate} onTopUp={() => requireLogin(() => setActiveModal("topup"))} onWithdraw={() => requireLogin(() => setActiveModal("withdraw"))} />
+        <StoreShortcutGrid
+          navigate={navigate}
+          isLoggedIn={Boolean(currentMember)}
+          onTopUp={() => requireLogin(() => setActiveModal("topup"))}
+          onWithdraw={() => requireLogin(() => setActiveModal("withdraw"))}
+        />
         <PremiumBanner
           onViewDetails={() => {
             if (!currentMember) {

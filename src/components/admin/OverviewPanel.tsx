@@ -1,5 +1,5 @@
 import { BadgeDollarSign, Banknote, Pencil, Plus, ShieldCheck, UserPlus, WalletCards } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Panel } from "../common";
 import type { AppState } from "../../types";
 import { formatRupiah } from "../../utils";
@@ -27,6 +27,8 @@ export default function OverviewPanel({ state, totals, canManageBanks = false }:
   const approvedTransactions = state.transactions.filter((transaction) => transaction.status === "approved").length;
   const rejectedTransactions = state.transactions.filter((transaction) => transaction.status === "rejected").length;
   const totalTransactions = Math.max(1, state.transactions.length);
+  const financeTrend = useMemo(() => buildFinanceTrend(state.transactions), [state.transactions]);
+  const maxMonthlyFinance = Math.max(1, ...state.admins.flatMap((admin) => [admin.monthDeposits, admin.monthWithdrawals]));
 
   return (
     <div className="space-y-6">
@@ -38,17 +40,22 @@ export default function OverviewPanel({ state, totals, canManageBanks = false }:
         <StatCard icon={<ShieldCheck />} label="Monthly releases" value={formatRupiah(totals.monthWithdrawals)} />
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[1.2fr_0.8fr]">
-        <Panel title="Registration Growth">
+      <div className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
+        <Panel title="Registration Analytics">
+          <div className="mb-5 grid gap-3 sm:grid-cols-3">
+            <AnalyticsPill label="Total registrations" value={String(totals.registrations)} />
+            <AnalyticsPill label="Top performer" value={getTopAdmin(state.admins)?.name ?? "-"} />
+            <AnalyticsPill label="Active admins" value={String(state.admins.length)} />
+          </div>
           <div className="space-y-4">
             {state.admins.length ? (
               state.admins.map((admin) => (
-                <ChartBar
+                <RegistrationBar
                   key={admin.id}
                   label={admin.name}
+                  sublabel={`Code ${admin.adminCode ?? admin.code}`}
                   value={`${admin.registrations} people`}
                   percent={(admin.registrations / maxRegistrations) * 100}
-                  tone="green"
                 />
               ))
             ) : (
@@ -58,10 +65,13 @@ export default function OverviewPanel({ state, totals, canManageBanks = false }:
         </Panel>
 
         <Panel title="Transaction Status">
-          <div className="space-y-4">
-            <DonutRow label="Approved" value={approvedTransactions} percent={(approvedTransactions / totalTransactions) * 100} className="bg-emerald-500" />
-            <DonutRow label="Pending" value={pendingTransactions} percent={(pendingTransactions / totalTransactions) * 100} className="bg-amber-500" />
-            <DonutRow label="Rejected" value={rejectedTransactions} percent={(rejectedTransactions / totalTransactions) * 100} className="bg-coral" />
+          <div className="grid gap-5 sm:grid-cols-[180px_1fr] sm:items-center xl:grid-cols-1 2xl:grid-cols-[180px_1fr]">
+            <StatusDonut approved={approvedTransactions} pending={pendingTransactions} rejected={rejectedTransactions} />
+            <div className="space-y-3">
+              <StatusLegend label="Approved" value={approvedTransactions} total={totalTransactions} color="bg-emerald-500" />
+              <StatusLegend label="Pending" value={pendingTransactions} total={totalTransactions} color="bg-amber-500" />
+              <StatusLegend label="Rejected" value={rejectedTransactions} total={totalTransactions} color="bg-coral" />
+            </div>
           </div>
         </Panel>
       </div>
@@ -112,6 +122,36 @@ export default function OverviewPanel({ state, totals, canManageBanks = false }:
             ) : (
               <EmptyChart text="No daily finance data yet." />
             )}
+          </div>
+
+          <div className="mb-6 rounded bg-gradient-to-br from-[#05251f] via-[#083a30] to-[#0b5d45] p-4 text-white shadow-sm ring-1 ring-emerald-300/20">
+            <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-black uppercase tracking-wide text-emerald-100">Responsive finance chart</p>
+                <p className="mt-1 text-sm text-white/65">7-day top-up and withdrawal movement from request records.</p>
+              </div>
+              <div className="flex gap-3 text-xs font-black">
+                <span className="inline-flex items-center gap-1.5 text-emerald-200"><span className="h-2.5 w-2.5 rounded-full bg-emerald-400" /> Top-up</span>
+                <span className="inline-flex items-center gap-1.5 text-lime-200"><span className="h-2.5 w-2.5 rounded-full bg-lime-300" /> Withdrawal</span>
+              </div>
+            </div>
+            <FinanceTrendChart data={financeTrend} />
+          </div>
+
+          <div className="mb-6 rounded bg-white p-4 ring-1 ring-slate-100">
+            <div className="mb-4">
+              <p className="text-xs font-black uppercase tracking-wide text-slate-500">Monthly finance comparison</p>
+              <p className="mt-1 text-sm text-slate-500">Deposits and releases across admin scopes.</p>
+            </div>
+            <div className="space-y-3">
+              {state.admins.length ? (
+                state.admins.map((admin) => (
+                  <StackedFinanceBar key={admin.id} admin={admin} max={maxMonthlyFinance} />
+                ))
+              ) : (
+                <EmptyChart text="No monthly finance data yet." />
+              )}
+            </div>
           </div>
 
           <div className="overflow-x-auto">
@@ -207,32 +247,240 @@ export default function OverviewPanel({ state, totals, canManageBanks = false }:
   );
 }
 
-function ChartBar({ label, value, percent, tone }: { label: string; value: string; percent: number; tone: "green" | "coral" }) {
+function AnalyticsPill({ label, value }: { label: string; value: string }) {
   return (
-    <div>
-      <div className="mb-2 flex items-center justify-between gap-3 text-sm">
-        <span className="font-bold text-slate-700">{label}</span>
-        <span className="text-xs font-bold text-slate-500">{value}</span>
+    <div className="rounded bg-slate-50 p-3 ring-1 ring-slate-100">
+      <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">{label}</p>
+      <p className="mt-1 truncate text-lg font-black text-slate-900">{value}</p>
+    </div>
+  );
+}
+
+function RegistrationBar({ label, sublabel, value, percent }: { label: string; sublabel: string; value: string; percent: number }) {
+  return (
+    <div className="rounded border border-slate-100 bg-white p-3 shadow-sm">
+      <div className="mb-3 flex items-center justify-between gap-3 text-sm">
+        <div className="min-w-0">
+          <span className="block truncate font-black text-slate-800">{label}</span>
+          <span className="block text-xs font-semibold text-slate-400">{sublabel}</span>
+        </div>
+        <span className="shrink-0 rounded bg-mint px-2 py-1 text-xs font-black text-forest">{value}</span>
       </div>
-      <div className="h-3 overflow-hidden rounded-full bg-slate-100">
-        <div className={`h-full rounded-full ${tone === "green" ? "bg-forest" : "bg-coral"}`} style={{ width: `${Math.max(6, percent)}%` }} />
+      <div className="relative h-4 overflow-hidden rounded-full bg-slate-100">
+        <div className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-forest to-emerald-400" style={{ width: `${Math.max(6, percent)}%` }} />
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,.25)_25%,transparent_25%,transparent_50%,rgba(255,255,255,.25)_50%,rgba(255,255,255,.25)_75%,transparent_75%)] bg-[length:20px_20px] opacity-40" />
+      </div>
+      <p className="mt-2 text-right text-[11px] font-black text-slate-400">{Math.round(percent)}% of top admin</p>
+    </div>
+  );
+}
+
+function StatusDonut({ approved, pending, rejected }: { approved: number; pending: number; rejected: number }) {
+  const total = Math.max(1, approved + pending + rejected);
+  const radius = 54;
+  const circumference = 2 * Math.PI * radius;
+  const approvedSize = (approved / total) * circumference;
+  const pendingSize = (pending / total) * circumference;
+  const rejectedSize = (rejected / total) * circumference;
+  const approvedOffset = 0;
+  const pendingOffset = -approvedSize;
+  const rejectedOffset = -(approvedSize + pendingSize);
+
+  return (
+    <div className="relative mx-auto h-44 w-44">
+      <svg className="-rotate-90" viewBox="0 0 140 140" role="img" aria-label="Transaction status donut chart">
+        <circle cx="70" cy="70" r={radius} fill="none" stroke="#eef2f7" strokeWidth="18" />
+        <circle cx="70" cy="70" r={radius} fill="none" stroke="#10b981" strokeWidth="18" strokeLinecap="round" strokeDasharray={`${approvedSize} ${circumference - approvedSize}`} strokeDashoffset={approvedOffset} />
+        <circle cx="70" cy="70" r={radius} fill="none" stroke="#f59e0b" strokeWidth="18" strokeLinecap="round" strokeDasharray={`${pendingSize} ${circumference - pendingSize}`} strokeDashoffset={pendingOffset} />
+        <circle cx="70" cy="70" r={radius} fill="none" stroke="#fb6b5b" strokeWidth="18" strokeLinecap="round" strokeDasharray={`${rejectedSize} ${circumference - rejectedSize}`} strokeDashoffset={rejectedOffset} />
+      </svg>
+      <div className="absolute inset-0 grid place-items-center text-center">
+        <div>
+          <p className="text-3xl font-black text-slate-900">{approved + pending + rejected}</p>
+          <p className="text-xs font-black uppercase text-slate-400">Requests</p>
+        </div>
       </div>
     </div>
   );
 }
 
-function DonutRow({ label, value, percent, className }: { label: string; value: number; percent: number; className: string }) {
+function StatusLegend({ label, value, total, color }: { label: string; value: number; total: number; color: string }) {
+  const percent = (value / total) * 100;
   return (
-    <div>
+    <div className="rounded bg-slate-50 p-3 ring-1 ring-slate-100">
       <div className="mb-2 flex items-center justify-between text-sm">
-        <span className="font-bold text-slate-700">{label}</span>
-        <span className="text-xs font-bold text-slate-500">{value}</span>
+        <span className="inline-flex items-center gap-2 font-black text-slate-700"><span className={`h-2.5 w-2.5 rounded-full ${color}`} />{label}</span>
+        <span className="text-xs font-black text-slate-500">{value} / {Math.round(percent)}%</span>
       </div>
-      <div className="h-3 overflow-hidden rounded-full bg-slate-100">
-        <div className={`h-full rounded-full ${className}`} style={{ width: `${Math.max(value ? 6 : 0, percent)}%` }} />
+      <div className="h-2 overflow-hidden rounded-full bg-white">
+        <div className={`h-full rounded-full ${color}`} style={{ width: `${Math.max(value ? 5 : 0, percent)}%` }} />
       </div>
     </div>
   );
+}
+
+type FinanceTrendPoint = { label: string; topup: number; withdrawal: number };
+type ChartPoint = { x: number; y: number };
+
+function FinanceTrendChart({ data }: { data: FinanceTrendPoint[] }) {
+  const width = 720;
+  const areaHeight = 180;
+  const lineHeight = 150;
+  const padding = 26;
+  const maxValue = Math.max(1, ...data.flatMap((item) => [item.topup, item.withdrawal]));
+  const topupPoints = getChartPoints(data, "topup", width, areaHeight, padding, maxValue);
+  const withdrawalPoints = getChartPoints(data, "withdrawal", width, areaHeight, padding, maxValue);
+  const compactTopupPoints = getChartPoints(data, "topup", width, lineHeight, padding, maxValue);
+  const compactWithdrawalPoints = getChartPoints(data, "withdrawal", width, lineHeight, padding, maxValue);
+
+  return (
+    <div className="grid gap-4">
+      <div className="rounded bg-white/8 p-3 ring-1 ring-white/10 backdrop-blur sm:p-4">
+        <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-sm font-black text-white">Top-up and withdrawal flow</p>
+            <p className="text-xs font-semibold text-emerald-100/70">Filled trend view, scaled for desktop and mobile.</p>
+          </div>
+          <p className="text-xs font-black text-emerald-100">Peak: {formatRupiah(maxValue)}</p>
+        </div>
+        <svg className="block h-auto w-full" viewBox={`0 0 ${width} ${areaHeight}`} role="img" aria-label="Responsive seven day finance area chart" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="financeTopupFill" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stopColor="#6ee7b7" stopOpacity="0.9" />
+              <stop offset="100%" stopColor="#059669" stopOpacity="0.1" />
+            </linearGradient>
+            <linearGradient id="financeWithdrawalFill" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stopColor="#bef264" stopOpacity="0.72" />
+              <stop offset="100%" stopColor="#84cc16" stopOpacity="0.08" />
+            </linearGradient>
+          </defs>
+          <ChartGrid width={width} height={areaHeight} padding={padding} />
+          <path d={areaPath(withdrawalPoints, areaHeight, padding)} fill="url(#financeWithdrawalFill)" />
+          <path d={areaPath(topupPoints, areaHeight, padding)} fill="url(#financeTopupFill)" />
+          <path d={smoothPath(withdrawalPoints)} fill="none" stroke="#bef264" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" />
+          <path d={smoothPath(topupPoints)} fill="none" stroke="#34d399" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" />
+          <ChartLabels data={data} width={width} height={areaHeight} padding={padding} />
+        </svg>
+      </div>
+
+      <div className="rounded bg-[#06251f]/85 p-3 ring-1 ring-emerald-300/15 sm:p-4">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm font-black text-white">Request activity line</p>
+          <div className="flex gap-3 text-[11px] font-black uppercase tracking-wide">
+            <span className="inline-flex items-center gap-1.5 text-emerald-200"><span className="h-2 w-5 rounded-full bg-emerald-400" /> Top-up</span>
+            <span className="inline-flex items-center gap-1.5 text-lime-200"><span className="h-2 w-5 rounded-full bg-lime-300" /> Withdrawal</span>
+          </div>
+        </div>
+        <svg className="block h-auto w-full" viewBox={`0 0 ${width} ${lineHeight}`} role="img" aria-label="Responsive seven day finance line chart" preserveAspectRatio="none">
+          <ChartGrid width={width} height={lineHeight} padding={padding} />
+          <path d={smoothPath(compactTopupPoints)} fill="none" stroke="#34d399" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" />
+          <path d={smoothPath(compactWithdrawalPoints)} fill="none" stroke="#bef264" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" />
+          {compactTopupPoints.map((point, index) => (
+            <circle key={`topup-${data[index].label}`} cx={point.x} cy={point.y} r="4" fill="#34d399" stroke="#06251f" strokeWidth="2" />
+          ))}
+          {compactWithdrawalPoints.map((point, index) => (
+            <circle key={`withdrawal-${data[index].label}`} cx={point.x} cy={point.y} r="4" fill="#bef264" stroke="#06251f" strokeWidth="2" />
+          ))}
+          <ChartLabels data={data} width={width} height={lineHeight} padding={padding} />
+        </svg>
+      </div>
+    </div>
+  );
+}
+
+function ChartGrid({ width, height, padding }: { width: number; height: number; padding: number }) {
+  return (
+    <>
+      {[0, 1, 2, 3, 4].map((line) => {
+        const y = padding + line * ((height - padding * 2) / 4);
+        return <line key={line} x1={padding} x2={width - padding} y1={y} y2={y} stroke="rgba(209,250,229,.16)" />;
+      })}
+    </>
+  );
+}
+
+function ChartLabels({ data, width, height, padding }: { data: FinanceTrendPoint[]; width: number; height: number; padding: number }) {
+  const xStep = data.length > 1 ? (width - padding * 2) / (data.length - 1) : 0;
+  return (
+    <>
+      {data.map((item, index) => (
+        <text key={item.label} x={padding + index * xStep} y={height - 6} textAnchor="middle" fill="rgba(209,250,229,.62)" fontSize="11" fontWeight="800">
+          {item.label}
+        </text>
+      ))}
+    </>
+  );
+}
+
+function getChartPoints(data: FinanceTrendPoint[], key: "topup" | "withdrawal", width: number, height: number, padding: number, maxValue: number): ChartPoint[] {
+  const xStep = data.length > 1 ? (width - padding * 2) / (data.length - 1) : 0;
+  return data.map((item, index) => ({
+    x: padding + index * xStep,
+    y: height - padding - (item[key] / maxValue) * (height - padding * 2),
+  }));
+}
+
+function smoothPath(points: ChartPoint[]) {
+  if (!points.length) return "";
+  if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
+
+  return points.reduce((path, point, index) => {
+    if (index === 0) return `M ${point.x} ${point.y}`;
+    const previous = points[index - 1];
+    const controlX = (previous.x + point.x) / 2;
+    return `${path} C ${controlX} ${previous.y}, ${controlX} ${point.y}, ${point.x} ${point.y}`;
+  }, "");
+}
+
+function areaPath(points: ChartPoint[], height: number, padding: number) {
+  if (!points.length) return "";
+  const first = points[0];
+  const last = points[points.length - 1];
+  return `${smoothPath(points)} L ${last.x} ${height - padding} L ${first.x} ${height - padding} Z`;
+}
+
+function StackedFinanceBar({ admin, max }: { admin: AppState["admins"][number]; max: number }) {
+  const depositPercent = (admin.monthDeposits / max) * 100;
+  const withdrawalPercent = (admin.monthWithdrawals / max) * 100;
+  return (
+    <div className="rounded border border-slate-100 p-3">
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <p className="truncate text-sm font-black text-slate-800">{admin.name}</p>
+        <p className="shrink-0 text-xs font-black text-slate-500">{formatRupiah(admin.monthDeposits)} / {formatRupiah(admin.monthWithdrawals)}</p>
+      </div>
+      <div className="grid gap-1">
+        <div className="h-3 overflow-hidden rounded-full bg-slate-100">
+          <div className="h-full rounded-full bg-gradient-to-r from-forest to-emerald-400" style={{ width: `${Math.max(admin.monthDeposits ? 5 : 0, depositPercent)}%` }} />
+        </div>
+        <div className="h-3 overflow-hidden rounded-full bg-slate-100">
+          <div className="h-full rounded-full bg-gradient-to-r from-coral to-rose-400" style={{ width: `${Math.max(admin.monthWithdrawals ? 5 : 0, withdrawalPercent)}%` }} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function getTopAdmin(admins: AppState["admins"]) {
+  return [...admins].sort((left, right) => right.registrations - left.registrations)[0];
+}
+
+function buildFinanceTrend(transactions: AppState["transactions"]) {
+  const days = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date();
+    date.setDate(date.getDate() - (6 - index));
+    const key = date.toISOString().slice(0, 10);
+    return { key, label: date.toLocaleDateString("en-US", { month: "short", day: "numeric" }), topup: 0, withdrawal: 0 };
+  });
+
+  transactions.forEach((transaction) => {
+    const key = transaction.createdAt.slice(0, 10);
+    const day = days.find((item) => item.key === key);
+    if (!day) return;
+    if (transaction.type === "topup") day.topup += transaction.amount;
+    if (transaction.type === "withdrawal") day.withdrawal += transaction.amount;
+  });
+
+  return days;
 }
 
 function PerformanceSummary({ label, value, tone }: { label: string; value: string; tone: "slate" | "green" | "amber" }) {
