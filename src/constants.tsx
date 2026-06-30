@@ -1,7 +1,7 @@
 import { Boxes, ClipboardList, LayoutDashboard, ShieldCheck, UserCog, Users, WalletCards } from "lucide-react";
 import type { TransactionStatus, OrderStatus } from "./types";
 
-export const adminTabs = ["Overview", "Members", "Orders", "Finance", "Catalog", "Staff", "Account"] as const;
+export const adminTabs = ["Overview", "Members", "Tasks", "Orders", "Finance", "Catalog", "Staff", "Account"] as const;
 export type AdminTab = (typeof adminTabs)[number];
 
 export const statusStyles: Record<TransactionStatus | OrderStatus, string> = {
@@ -24,7 +24,8 @@ export function adminTabIcon(tab: AdminTab) {
   const props = { size: 18 };
   if (tab === "Overview") return <LayoutDashboard {...props} />;
   if (tab === "Members") return <Users {...props} />;
-  if (tab === "Orders") return <ClipboardList {...props} />;
+  if (tab === "Tasks") return <ClipboardList {...props} />;
+  if (tab === "Orders") return <Boxes {...props} />;
   if (tab === "Finance") return <WalletCards {...props} />;
   if (tab === "Catalog") return <Boxes {...props} />;
   if (tab === "Staff") return <UserCog {...props} />;

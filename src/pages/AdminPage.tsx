@@ -9,6 +9,7 @@ import FinanceTable from "../components/admin/FinanceTable";
 import MemberTable from "../components/admin/MemberTable";
 import OrderTable from "../components/admin/OrderTable";
 import OverviewPanel from "../components/admin/OverviewPanel";
+import TaskAssignmentTable from "../components/admin/TaskAssignmentTable";
 import StaffPanel from "../components/admin/StaffPanel";
 import type { AdminTab } from "../constants";
 import { allowedTabsForRole, clearActiveAdminId, getActiveAdmin } from "../services/adminSession";
@@ -126,6 +127,7 @@ export default function AdminPage({ navigate }: { navigate: Navigate }) {
           />
           {activeTab === "Overview" && <OverviewPanel state={state} totals={totals} />}
           {activeTab === "Members" && <MemberTable members={filteredMembers} />}
+          {activeTab === "Tasks" && <TaskAssignmentTable orders={filteredOrders} members={filteredMembers} products={state.products} />}
           {activeTab === "Orders" && <OrderTable orders={filteredOrders} members={filteredMembers} products={state.products} />}
           {activeTab === "Finance" && <FinanceTable transactions={filteredTransactions} members={state.members} canApprove={activeAdmin.role === "super_admin"} />}
           {activeTab === "Catalog" && <CatalogAdmin products={state.products} />}
