@@ -11,7 +11,7 @@ import RecentRecords from "../components/customer/RecentRecords";
 import StoreShortcutGrid from "../components/customer/StoreShortcutGrid";
 import TransactionModal from "../components/customer/TransactionModal";
 import { clearActiveCustomerId, getActiveCustomerId } from "../services/customerSession";
-import { completeOrderTask, createOrder } from "../services/ordersService";
+import { createOrder } from "../services/ordersService";
 import { useAppStore } from "../store/AppStore";
 import type { Product } from "../types";
 
@@ -21,6 +21,8 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
   const [favorites, setFavorites] = useState<string[]>([]);
   const [activeModal, setActiveModal] = useState<"topup" | "withdraw" | null>(null);
   const [taskMessage, setTaskMessage] = useState("");
+  const [isAcceptingTask, setIsAcceptingTask] = useState(false);
+  const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
   const [activeCustomerId, setActiveCustomerIdState] = useState(() => getActiveCustomerId());
 
   const currentMember = activeCustomerId ? state.members.find((member) => member.id === activeCustomerId) : undefined;
@@ -35,17 +37,25 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
     }
   }, [ready, state.members]);
 
-  const assignedOrder = currentMember ? state.orders.find((order) => order.member === currentMember.username && ["waiting", "assigned"].includes(order.status)) : undefined;
-  const assignedProduct = assignedOrder ? state.products.find((product) => product.code === assignedOrder.productCode) : undefined;
+  // Get active order (any non-completed order for this member)
+  const activeOrder = currentMember 
+    ? state.orders.find((order) => 
+        order.member === currentMember.username && 
+        !["completed", "diserahkan"].includes(order.status)
+      ) 
+    : null;
+
+  const assignedProduct = activeOrder ? state.products.find((product) => product.code === activeOrder.productCode) : undefined;
+
   const notifications = useMemo<CustomerNotification[]>(() => {
     if (!currentMember) return [];
 
     const orderNotifications = state.orders
-      .filter((order) => order.member === currentMember.username && order.status !== "completed")
+      .filter((order) => order.member === currentMember.username && !["completed", "diserahkan"].includes(order.status))
       .slice(0, 3)
       .map((order) => ({
         id: `order-${order.id}`,
-        title: order.status === "assigned" ? "Order ready to complete" : order.status === "waiting" ? "Waiting for order assignment" : "Order is frozen",
+        title: `Order ${order.status}`,
         text: `${order.productName || "Pending assignment"} · ${order.referenceNumber ?? order.id}`,
         tone: order.status === "frozen" ? ("danger" as const) : ("info" as const),
       }));
@@ -80,16 +90,13 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
     setFavorites((items) => (items.includes(productId) ? items.filter((id) => id !== productId) : [...items, productId]));
   };
 
-  const takeOrder = async (_product: Product) => {
+  const handleAcceptTask = async () => {
     if (!currentMember) {
       navigate("/login");
       return;
     }
-    if (assignedOrder) {
-      setTaskMessage("You already have an active task. Complete it before taking another one.");
-      return;
-    }
 
+    setIsAcceptingTask(true);
     try {
       const order = await createOrder({
         memberId: currentMember.id,
@@ -98,29 +105,39 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
         value: 0,
         commission: 0,
         requiredBalance: 0,
-        status: "waiting",
+        status: "waiting_assignment",
         createdAt: new Date().toISOString().slice(0, 16).replace("T", " "),
       });
       dispatch({ type: "addOrder", payload: order });
-      setTaskMessage(`Task successfully taken. Reference ${order.referenceNumber}. Waiting for order assignment.`);
+      setTaskMessage(`Task accepted! Reference: ${order.referenceNumber}. Waiting for admin to assign products.`);
     } catch (error) {
-      console.error("Failed to take task:", error);
-      setTaskMessage("Unable to take task right now. Please try again.");
+      console.error("Failed to accept task:", error);
+      setTaskMessage("Unable to accept task. Please try again.");
+    } finally {
+      setIsAcceptingTask(false);
     }
   };
 
-  const completeAssignedOrder = async (orderId: string) => {
-    if (!currentMember) return;
-    const order = state.orders.find((item) => item.id === orderId);
-    if (!order || order.status !== "assigned") return;
+  const handleSubmitOrder = async () => {
+    if (!activeOrder || !currentMember) return;
 
+    setIsSubmittingOrder(true);
     try {
-      const result = await completeOrderTask(order, currentMember);
-      dispatch({ type: "completeOrderWithMember", payload: result });
-      setTaskMessage(`Order submitted. Commission ${result.order.commission.toLocaleString("id-ID")} IDR added to your work balance.`);
+      // Update order status to waiting_shipment
+      dispatch({
+        type: "updateOrder",
+        payload: {
+          ...activeOrder,
+          status: "waiting_shipment",
+          submittedAt: new Date().toISOString().slice(0, 16).replace("T", " "),
+        },
+      });
+      setTaskMessage("Order submitted successfully! Waiting for shipment confirmation.");
     } catch (error) {
-      console.error("Failed to complete task:", error);
-      setTaskMessage(error instanceof Error ? error.message : "Unable to submit order.");
+      console.error("Failed to submit order:", error);
+      setTaskMessage("Unable to submit order. Please try again.");
+    } finally {
+      setIsSubmittingOrder(false);
     }
   };
 
@@ -183,7 +200,11 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
       <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
         <StoreShortcutGrid navigate={navigate} onTopUp={() => requireLogin(() => setActiveModal("topup"))} onWithdraw={() => requireLogin(() => setActiveModal("withdraw"))} />
         <PremiumBanner />
-        {taskMessage && <p className="mt-5 rounded bg-emerald-50 p-4 text-sm font-bold text-emerald-700">{taskMessage}</p>}
+        {taskMessage && (
+          <p className="mt-5 rounded bg-emerald-50 p-4 text-sm font-bold text-emerald-700">
+            {taskMessage}
+          </p>
+        )}
 
         <div className="mt-6 grid gap-5 lg:grid-cols-[1fr_340px]">
           <ProductGrid
@@ -191,15 +212,15 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
             favorites={favorites}
             onClearSearch={() => setQuery("")}
             onToggleFavorite={toggleFavorite}
-            onTakeOrder={takeOrder}
+            onTakeOrder={() => {}} // Disabled - use AssignmentPanel instead
           />
           <aside className="space-y-5">
             <AssignmentPanel
-              order={assignedOrder}
-              featuredProduct={assignedProduct}
-              memberBalance={currentMember?.balance ?? 0}
-              onTopUp={() => requireLogin(() => setActiveModal("topup"))}
-              onComplete={completeAssignedOrder}
+              order={activeOrder}
+              products={state.products}
+              onAcceptTask={handleAcceptTask}
+              onSubmitOrder={handleSubmitOrder}
+              isLoading={isAcceptingTask || isSubmittingOrder}
             />
             <DepositDestination banks={state.banks} />
             <RecentRecords transactions={currentMember ? state.transactions.filter((transaction) => transaction.member === currentMember.username) : []} />
@@ -209,7 +230,7 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
 
       <BottomNavbar isLoggedIn={Boolean(activeCustomerId)} navigate={navigate} />
       {activeModal && currentMember && (
-        <TransactionModal type={activeModal} member={currentMember.username} admin={currentMember.referredBy} banks={state.banks} onClose={() => setActiveModal(null)} />
+        <TransactionModal type={activeModal} member={currentMember.username} onClose={() => setActiveModal(null)} />
       )}
     </main>
   );

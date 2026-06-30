@@ -1,98 +1,150 @@
-import { useState } from "react";
+import { CheckCircle2, Clock, Package } from "lucide-react";
 import type { Order, Product } from "../../types";
 import { formatRupiah } from "../../utils";
+import { 
+  getOrderState, 
+  getOrderStateLabel, 
+  hasProductsAssigned 
+} from "../../services/orderStateService";
 
 interface AssignmentPanelProps {
-  order?: Order;
-  featuredProduct?: Product;
-  memberBalance: number;
-  onTopUp: () => void;
-  onComplete: (orderId: string) => void;
+  order: Order | null;
+  products: Product[];
+  onAcceptTask: () => void;
+  onSubmitOrder: () => void;
+  isLoading?: boolean;
 }
 
-export default function AssignmentPanel({ order, featuredProduct, memberBalance, onTopUp, onComplete }: AssignmentPanelProps) {
-  const [confirming, setConfirming] = useState(false);
-  const [error, setError] = useState("");
-  const requiredBalance = order?.requiredBalance ?? 0;
-  const missingBalance = Math.max(0, requiredBalance - memberBalance);
-  const canSubmit = Boolean(order && order.status === "assigned" && missingBalance === 0);
+export default function AssignmentPanel({
+  order,
+  products,
+  onAcceptTask,
+  onSubmitOrder,
+  isLoading = false,
+}: AssignmentPanelProps) {
+  const state = getOrderState(order);
+  const hasProducts = hasProductsAssigned(order);
+  const assignedProduct = order && products.find((p) => p.code === order.productCode);
 
-  const sendOrder = () => {
-    if (!order) return;
-    if (order.status !== "assigned") {
-      setError("This task is waiting for administrator assignment or shipment.");
-      return;
-    }
-    if (missingBalance > 0) {
-      setError(`Insufficient work balance. Please top up ${formatRupiah(missingBalance)} more to continue.`);
-      return;
-    }
-    setError("");
-    setConfirming(true);
-  };
-
-  return (
-    <section id="assignment" className="rounded bg-white p-5 shadow-panel">
-      <h2 className="text-lg font-black">Current assignment</h2>
-      {order ? (
-        <>
-          {featuredProduct && <img className="mt-4 h-40 w-full rounded object-cover" src={featuredProduct.image} alt={order.productName ?? "Assigned product"} />}
-          <p className="mt-4 text-xs font-bold uppercase text-slate-500">Transaction number</p>
-          <p className="font-black text-forest">{order.referenceNumber ?? order.id}</p>
-          <p className={`mt-3 rounded px-3 py-2 text-sm font-bold ${order.status === "waiting" ? "bg-amber-100 text-amber-700" : "bg-sky-100 text-sky-700"}`}>
-            {order.status === "waiting" ? "Waiting for order assignment or shipment." : "Order assigned. Ready to send."}
+  // STATE 1: No Task
+  if (state === "no_task") {
+    return (
+      <div className="rounded bg-white p-6 shadow-panel">
+        <div className="text-center">
+          <Package size={48} className="mx-auto mb-4 text-slate-300" />
+          <h3 className="text-lg font-bold mb-2">No Task Assigned</h3>
+          <p className="text-sm text-slate-500 mb-6">
+            Accept a task to get started with your orders.
           </p>
-          <p className="mt-4 font-bold">{order.productName ?? "Product pending assignment"}</p>
-          <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
-            <p>
-              <span className="block text-xs text-slate-500">Order value</span>
-              {formatRupiah(order.value)}
+          <button
+            onClick={onAcceptTask}
+            disabled={isLoading}
+            className="w-full rounded bg-forest px-4 py-3 font-bold text-white hover:bg-forest/90 disabled:bg-slate-400"
+          >
+            {isLoading ? "Accepting..." : "Accept Task"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // STATE 2: Waiting for Assignment
+  if (state === "waiting_assignment") {
+    return (
+      <div className="rounded bg-white p-6 shadow-panel border-2 border-amber-200">
+        <div className="flex items-start gap-4">
+          <Clock className="text-amber-600 flex-shrink-0 mt-1" size={24} />
+          <div className="flex-1">
+            <h3 className="font-bold mb-2">Waiting for Assignment</h3>
+            <p className="text-sm text-slate-600 mb-4">
+              Your task has been accepted. Admin will assign products to you shortly.
             </p>
-            <p>
-              <span className="block text-xs text-slate-500">Commission</span>
-              {formatRupiah(order.commission)}
-            </p>
-            <p>
-              <span className="block text-xs text-slate-500">Order total</span>
-              {formatRupiah(0)}
-            </p>
-            <p>
-              <span className="block text-xs text-slate-500">Required balance</span>
-              {formatRupiah(requiredBalance)}
-            </p>
-          </div>
-          {error && (
-            <div className="mt-4 rounded bg-red-50 p-3 text-sm font-bold text-red-700">
-              {error}
-              {missingBalance > 0 && (
-                <button className="mt-3 w-full rounded bg-forest px-3 py-2 text-white" onClick={onTopUp}>
-                  Top up now
-                </button>
-              )}
+            <div className="text-xs text-slate-500">
+              Status: <span className="font-semibold text-amber-700">Waiting Assignment</span>
             </div>
-          )}
-          {confirming ? (
-            <div className="mt-4 rounded bg-slate-50 p-4">
-              <p className="font-black">Confirm simulated order</p>
-              <p className="mt-2 text-sm text-slate-600">No product purchase will be made. Your order total remains {formatRupiah(0)} and only the commission will be added after submission.</p>
-              <div className="mt-4 grid grid-cols-2 gap-2">
-                <button className="rounded border border-slate-200 px-3 py-2 text-sm font-bold" onClick={() => setConfirming(false)}>
-                  Back
-                </button>
-                <button className="rounded bg-forest px-3 py-2 text-sm font-bold text-white" onClick={() => onComplete(order.id)}>
-                  Confirm submit
-                </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // STATE 3 & 4: Product Assigned / Waiting Shipment
+  if (hasProducts) {
+    return (
+      <div className="rounded bg-white p-6 shadow-panel">
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-bold text-lg">Assigned Products</h3>
+            <span className="text-xs font-bold px-2 py-1 rounded bg-sky-100 text-sky-700">
+              {getOrderStateLabel(state)}
+            </span>
+          </div>
+
+          {assignedProduct && (
+            <div className="rounded border border-slate-200 p-4 mb-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-slate-500 uppercase">Product</p>
+                  <p className="font-bold">{assignedProduct.name}</p>
+                  <p className="text-sm text-slate-600">{assignedProduct.code}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500 uppercase">Price</p>
+                  <p className="font-bold">{formatRupiah(assignedProduct.price)}</p>
+                  <p className="text-sm text-emerald-700">
+                    Commission: {formatRupiah(assignedProduct.commission)}
+                  </p>
+                </div>
               </div>
             </div>
-          ) : (
-          <button className="mt-4 w-full rounded bg-coral px-3 py-3 text-sm font-bold text-white disabled:bg-slate-300" disabled={!canSubmit} onClick={sendOrder}>
-            Send order
-          </button>
           )}
-        </>
-      ) : (
-        <p className="mt-4 rounded bg-slate-50 p-4 text-sm text-slate-500">No active assignment. Take an order from the product list.</p>
-      )}
-    </section>
-  );
+
+          <div className="rounded bg-slate-50 p-4 mb-4">
+            <p className="text-xs text-slate-500 uppercase mb-2">Required Balance</p>
+            <p className="font-bold text-lg">{formatRupiah(order?.requiredBalance || 0)}</p>
+          </div>
+        </div>
+
+        {state === "product_assigned" && (
+          <button
+            onClick={onSubmitOrder}
+            disabled={isLoading}
+            className="w-full rounded bg-emerald-600 px-4 py-3 font-bold text-white hover:bg-emerald-700 disabled:bg-slate-400"
+          >
+            {isLoading ? "Submitting..." : "Yes, Send Order"}
+          </button>
+        )}
+
+        {(state === "waiting_shipment" || state === "belum_diserahkan") && (
+          <div className="rounded bg-orange-50 p-4 border border-orange-200">
+            <div className="flex items-start gap-2">
+              <CheckCircle2 size={20} className="text-orange-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold text-sm mb-1">Order Submitted</p>
+                <p className="text-xs text-slate-600">
+                  Your order has been submitted and is waiting for delivery confirmation.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {state === "diserahkan" && (
+          <div className="rounded bg-emerald-50 p-4 border border-emerald-200">
+            <div className="flex items-start gap-2">
+              <CheckCircle2 size={20} className="text-emerald-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold text-sm mb-1">Order Completed</p>
+                <p className="text-xs text-slate-600">
+                  Your order has been successfully completed and delivered.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return null;
 }
