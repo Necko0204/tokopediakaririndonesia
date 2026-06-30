@@ -1,3 +1,4 @@
+import { AlertCircle, CheckCircle2, Clock, PackageCheck, Truck, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { Navigate } from "../App";
 import AssignmentPanel from "../components/customer/AssignmentPanel";
@@ -12,7 +13,10 @@ import StoreShortcutGrid from "../components/customer/StoreShortcutGrid";
 import TransactionModal from "../components/customer/TransactionModal";
 import { clearActiveCustomerId, getActiveCustomerId } from "../services/customerSession";
 import { completeWorkflowOrder, createOrder, updateOrderStatus } from "../services/ordersService";
+import { getOrderState } from "../services/orderStateService";
 import { useAppStore } from "../store/AppStore";
+import type { Order, Product } from "../types";
+import { formatRupiah, shortDate } from "../utils";
 
 export default function CustomerPage({ navigate }: { navigate: Navigate }) {
   const { state, dispatch, ready } = useAppStore();
@@ -20,6 +24,8 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
   const [favorites, setFavorites] = useState<string[]>([]);
   const [activeModal, setActiveModal] = useState<"topup" | "withdraw" | null>(null);
   const [taskMessage, setTaskMessage] = useState("");
+  const [loginAlert, setLoginAlert] = useState("");
+  const [showTaskStatus, setShowTaskStatus] = useState(false);
   const [isAcceptingTask, setIsAcceptingTask] = useState(false);
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
   const [activeCustomerId, setActiveCustomerIdState] = useState(() => getActiveCustomerId());
@@ -88,7 +94,7 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
 
   const handleAcceptTask = async () => {
     if (!currentMember) {
-      navigate("/login");
+      setLoginAlert("You have to log in first!");
       return;
     }
     if (activeOrder) {
@@ -164,7 +170,7 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
 
   const requireLogin = (nextAction: () => void) => {
     if (!currentMember) {
-      navigate("/login");
+      setLoginAlert("You have to log in first!");
       return;
     }
     nextAction();
@@ -216,10 +222,28 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
         onTopUp={() => requireLogin(() => setActiveModal("topup"))}
         onWithdraw={() => requireLogin(() => setActiveModal("withdraw"))}
       />
+      {loginAlert && (
+        <LoginRequiredAlert
+          message={loginAlert}
+          onClose={() => setLoginAlert("")}
+          onLogin={() => {
+            setLoginAlert("");
+            navigate("/login");
+          }}
+        />
+      )}
 
       <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
         <StoreShortcutGrid navigate={navigate} onTopUp={() => requireLogin(() => setActiveModal("topup"))} onWithdraw={() => requireLogin(() => setActiveModal("withdraw"))} />
-        <PremiumBanner />
+        <PremiumBanner
+          onViewDetails={() => {
+            if (!currentMember) {
+              setLoginAlert("You have to log in first!");
+              return;
+            }
+            setShowTaskStatus(true);
+          }}
+        />
         {taskMessage && (
           <p className="mt-5 rounded bg-emerald-50 p-4 text-sm font-bold text-emerald-700">
             {taskMessage}
@@ -257,6 +281,164 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
       {activeModal && currentMember && (
         <TransactionModal type={activeModal} member={currentMember.username} admin={currentMember.referredBy} banks={state.banks} onClose={() => setActiveModal(null)} />
       )}
+      {showTaskStatus && currentMember && (
+        <TaskStatusModal
+          order={activeOrder}
+          products={state.products}
+          balance={currentMember.balance}
+          onClose={() => setShowTaskStatus(false)}
+          onTakeOrder={() => {
+            setShowTaskStatus(false);
+            handleAcceptTask();
+          }}
+          onTopUp={() => {
+            setShowTaskStatus(false);
+            requireLogin(() => setActiveModal("topup"));
+          }}
+          onOpenOrders={() => {
+            setShowTaskStatus(false);
+            navigate("/orders");
+          }}
+        />
+      )}
     </main>
+  );
+}
+
+function TaskStatusModal({
+  order,
+  products,
+  balance,
+  onClose,
+  onTakeOrder,
+  onTopUp,
+  onOpenOrders,
+}: {
+  order: Order | null;
+  products: Product[];
+  balance: number;
+  onClose: () => void;
+  onTakeOrder: () => void;
+  onTopUp: () => void;
+  onOpenOrders: () => void;
+}) {
+  const state = getOrderState(order);
+  const assignedProduct = order?.assignedProducts?.[0];
+  const fallbackProduct = order?.productCode ? products.find((product) => product.code === order.productCode) : undefined;
+  const productName = assignedProduct?.name ?? order?.productName ?? fallbackProduct?.name ?? "No product assigned yet";
+  const requiredBalance = order?.requiredBalance ?? order?.value ?? 0;
+  const shortage = Math.max(0, requiredBalance - balance);
+  const steps = [
+    { key: "waiting_assignment", label: "Task taken", icon: <Clock size={16} /> },
+    { key: "product_assigned", label: "Product assigned", icon: <PackageCheck size={16} /> },
+    { key: "waiting_shipment", label: "Waiting shipment", icon: <Truck size={16} /> },
+    { key: "diserahkan", label: "Completed", icon: <CheckCircle2 size={16} /> },
+  ];
+  const activeIndex = state === "no_task" ? -1 : state === "belum_diserahkan" ? 2 : steps.findIndex((step) => step.key === state);
+
+  const statusLabel =
+    state === "no_task"
+      ? "No active task"
+      : state === "waiting_assignment"
+        ? "Waiting for admin assignment"
+        : state === "product_assigned"
+          ? "Ready to send"
+          : state === "waiting_shipment" || state === "belum_diserahkan"
+            ? "Waiting for shipment"
+            : "Completed";
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-slate-900/50 px-4">
+      <div className="w-full max-w-2xl overflow-hidden rounded bg-white shadow-panel">
+        <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4">
+          <div>
+            <p className="text-xs font-black uppercase tracking-wide text-forest">Task status report</p>
+            <h2 className="mt-1 text-2xl font-black text-slate-900">{statusLabel}</h2>
+          </div>
+          <button className="grid h-9 w-9 place-items-center rounded hover:bg-slate-100" onClick={onClose} aria-label="Close task status">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="grid gap-5 p-5">
+          <div className="grid gap-3 sm:grid-cols-4">
+            {steps.map((step, index) => {
+              const active = index <= activeIndex;
+              return (
+                <div key={step.key} className={`rounded border p-3 ${active ? "border-emerald-200 bg-emerald-50 text-forest" : "border-slate-200 bg-slate-50 text-slate-400"}`}>
+                  <div className="flex items-center gap-2">
+                    <span className={`grid h-7 w-7 place-items-center rounded-full ${active ? "bg-forest text-white" : "bg-white text-slate-400"}`}>{step.icon}</span>
+                    <span className="text-xs font-black">{step.label}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="grid gap-4 rounded bg-slate-50 p-4 sm:grid-cols-2">
+            <StatusItem label="Transaction number" value={order?.referenceNumber ?? "No task accepted"} />
+            <StatusItem label="Date" value={order?.createdAt ? shortDate(order.createdAt) : "-"} />
+            <StatusItem label="Assigned product" value={productName} />
+            <StatusItem label="Quantity" value={String(order?.quantity ?? assignedProduct?.quantity ?? 0)} />
+            <StatusItem label="Required balance" value={formatRupiah(requiredBalance)} />
+            <StatusItem label="Commission" value={formatRupiah(order?.commission ?? 0)} />
+          </div>
+
+          {shortage > 0 && (
+            <div className="rounded border border-red-100 bg-red-50 p-4 text-sm font-bold text-red-700">
+              Saldo anda kurang sebesar {formatRupiah(shortage)}. Silakan isi ulang saldo anda untuk melanjutkan.
+            </div>
+          )}
+
+          <div className="flex flex-col gap-2 sm:flex-row">
+            {state === "no_task" ? (
+              <button className="flex-1 rounded bg-forest px-4 py-3 font-black text-white" onClick={onTakeOrder}>
+                Ambil Pesanan
+              </button>
+            ) : (
+              <button className="flex-1 rounded bg-forest px-4 py-3 font-black text-white" onClick={onOpenOrders}>
+                Open task orders
+              </button>
+            )}
+            <button className="flex-1 rounded border border-slate-200 px-4 py-3 font-black text-slate-700 hover:bg-slate-50" onClick={onTopUp}>
+              Top up balance
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StatusItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-xs font-black uppercase text-slate-500">{label}</p>
+      <p className="mt-1 font-black text-slate-900">{value}</p>
+    </div>
+  );
+}
+
+function LoginRequiredAlert({ message, onClose, onLogin }: { message: string; onClose: () => void; onLogin: () => void }) {
+  return (
+    <div className="fixed inset-x-0 top-20 z-50 mx-auto w-[calc(100%-2rem)] max-w-md">
+      <div className="rounded bg-white p-4 shadow-panel ring-1 ring-red-100">
+        <div className="flex items-start gap-3">
+          <div className="grid h-10 w-10 shrink-0 place-items-center rounded bg-red-50 text-coral">
+            <AlertCircle size={20} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="font-black text-slate-900">{message}</p>
+            <p className="mt-1 text-sm leading-5 text-slate-500">Please log in before using top up, withdrawal, or order tasks.</p>
+            <button className="mt-3 rounded bg-forest px-4 py-2 text-sm font-black text-white" onClick={onLogin}>
+              Login now
+            </button>
+          </div>
+          <button className="grid h-8 w-8 shrink-0 place-items-center rounded hover:bg-slate-100" onClick={onClose} aria-label="Close login alert">
+            <X size={17} />
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
