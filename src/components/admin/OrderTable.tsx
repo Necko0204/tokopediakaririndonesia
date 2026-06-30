@@ -1,144 +1,262 @@
-import { Filter, Plus } from "lucide-react";
-import { useState } from "react";
-import { Field, inputClass, Panel } from "../common";
-import { statusStyles } from "../../constants";
-import { assignOrderProduct, createOrder } from "../../services/ordersService";
+import { CheckCircle2, ChevronLeft, ChevronRight, Filter, PackagePlus, X } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Panel } from "../common";
+import { assignOrderProduct } from "../../services/ordersService";
+import { getOrderState } from "../../services/orderStateService";
 import { useAppStore } from "../../store/AppStore";
 import type { Member, Order, Product } from "../../types";
 import { formatRupiah, shortDate } from "../../utils";
 import Filters from "./Filters";
 
+const pageSize = 5;
+
 export default function OrderTable({ orders, members, products }: { orders: Order[]; members: Member[]; products: Product[] }) {
   const { dispatch } = useAppStore();
-  const [showAssignForm, setShowAssignForm] = useState(false);
-  const [memberId, setMemberId] = useState("");
-  const [productId, setProductId] = useState("");
-  const [saving, setSaving] = useState(false);
+  const [targetOrder, setTargetOrder] = useState<Order | null>(null);
+  const [selectedProductId, setSelectedProductId] = useState("");
+  const [productPage, setProductPage] = useState(0);
+  const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState("");
 
-  const assignTask = async (event: React.FormEvent) => {
-    event.preventDefault();
-    const member = members.find((item) => item.id === memberId);
-    const product = products.find((item) => item.id === productId);
+  const orderedRows = useMemo(
+    () =>
+      [...orders].sort((a, b) => {
+        const left = new Date(a.createdAt.replace(" ", "T")).getTime();
+        const right = new Date(b.createdAt.replace(" ", "T")).getTime();
+        return right - left;
+      }),
+    [orders],
+  );
 
-    if (!member || !product) {
-      setMessage("Select a worker/member and product task first.");
+  const productPages = Math.max(1, Math.ceil(products.length / pageSize));
+  const pagedProducts = products.slice(productPage * pageSize, productPage * pageSize + pageSize);
+
+  const openProductModal = (order: Order) => {
+    setTargetOrder(order);
+    setSelectedProductId("");
+    setProductPage(0);
+    setMessage("");
+  };
+
+  const closeProductModal = () => {
+    setTargetOrder(null);
+    setSelectedProductId("");
+    setProductPage(0);
+  };
+
+  const saveProductAssignment = async () => {
+    if (!targetOrder) return;
+    const selectedProduct = products.find((product) => product.id === selectedProductId);
+    if (!selectedProduct) {
+      setMessage("Please select a product first.");
+      return;
+    }
+    if (selectedProduct.quantity <= 0) {
+      setMessage("Selected product has no stock left.");
       return;
     }
 
-    if (product.quantity <= 0) {
-      setMessage("This product task has no quantity left.");
-      return;
-    }
-
-    setSaving(true);
-    setMessage("Assigning task...");
-
+    setIsSaving(true);
+    setMessage("");
     try {
-      const waitingOrder = orders.find((order) => order.member === member.username && order.status === "waiting");
-      if (waitingOrder) {
-        const order = await assignOrderProduct(waitingOrder, product);
-        dispatch({ type: "updateOrder", payload: order });
-      } else {
-        const waitingTask = await createOrder({
-          memberId: member.id,
-          member: member.username,
-          admin: member.referredBy,
-          value: 0,
-          commission: 0,
-          requiredBalance: 0,
-          status: "waiting",
-          createdAt: new Date().toISOString().slice(0, 16).replace("T", " "),
-        });
-        const order = await assignOrderProduct(waitingTask, product);
-        dispatch({ type: "addOrder", payload: order });
-      }
-      setMemberId("");
-      setProductId("");
-      setShowAssignForm(false);
-      setMessage("Task assigned to worker and saved to Firebase.");
+      const updatedOrder = await assignOrderProduct(targetOrder, selectedProduct);
+      dispatch({ type: "updateOrder", payload: updatedOrder });
+      setMessage("Produk berhasil ditambahkan ke pesanan.");
+      closeProductModal();
+      window.setTimeout(() => setMessage(""), 3500);
     } catch (error) {
-      console.error("Failed to assign task:", error);
-      setMessage("Firebase save failed. Check Firestore order rules.");
+      console.error("Failed to assign product:", error);
+      setMessage(error instanceof Error ? error.message : "Firebase save failed. Check Firestore order rules.");
     } finally {
-      setSaving(false);
+      setIsSaving(false);
     }
   };
 
   return (
-    <Panel
-      title="Order Intake Records"
-      action={
-        <div className="flex gap-2">
-          <button className="inline-flex items-center gap-2 rounded bg-forest px-3 py-2 text-sm font-semibold text-white" onClick={() => setShowAssignForm(!showAssignForm)}>
-            <Plus size={16} /> Assign task
+    <>
+      <Panel
+        title="Order Intake Records"
+        action={
+          <button className="inline-flex items-center gap-2 rounded border border-slate-200 px-3 py-2 text-sm font-semibold">
+            <Filter size={16} /> Filters
           </button>
-          <button className="inline-flex items-center gap-2 rounded border border-slate-200 px-3 py-2 text-sm font-semibold"><Filter size={16} /> Filters</button>
-        </div>
-      }
-    >
-      {showAssignForm && (
-        <form className="mb-5 grid gap-4 rounded bg-slate-50 p-4" onSubmit={assignTask}>
-          <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Worker / member">
-              <select className={inputClass} required value={memberId} onChange={(event) => setMemberId(event.target.value)}>
-                <option value="">Select worker</option>
-                {members.map((member) => (
-                  <option key={member.id} value={member.id}>
-                    {member.username} - {member.referredBy}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Product task">
-              <select className={inputClass} required value={productId} onChange={(event) => setProductId(event.target.value)}>
-                <option value="">Select product</option>
-                {products.map((product) => (
-                  <option key={product.id} value={product.id}>
-                    {product.code} - {product.name}
-                  </option>
-                ))}
-              </select>
-            </Field>
-          </div>
-          {message && (
-            <p className={`rounded px-3 py-2 text-sm font-semibold ${message.includes("failed") || message.includes("Select") || message.includes("quantity") ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-700"}`}>
-              {message}
-            </p>
-          )}
-          <button disabled={saving} className="rounded bg-forest px-4 py-3 font-bold text-white disabled:bg-slate-400">
-            {saving ? "Assigning..." : "Assign task to worker"}
-          </button>
-        </form>
-      )}
-      <Filters />
-      <div className="mt-4 grid gap-4">
-        {orders.length ? orders.map((order) => (
-          <article key={order.id} className="grid gap-4 rounded border border-slate-200 bg-white p-4 md:grid-cols-[1fr_1.3fr_1fr_auto] md:items-center">
-            <div>
-              <p className="text-xs uppercase text-slate-500">Worker</p>
-              <p className="font-bold">{order.member}</p>
-              <p className="text-xs text-slate-500">{order.admin ?? "Unassigned admin"}</p>
-              <p className="text-xs text-slate-500">{shortDate(order.createdAt)}</p>
-            </div>
-            <div>
-              <p className="text-xs uppercase text-slate-500">Product</p>
-              <p className="font-semibold">{order.productName ?? "Waiting for assignment"}</p>
-              <p className="text-xs text-slate-500">{order.productCode ?? order.referenceNumber ?? order.id}</p>
-            </div>
-            <div>
-              <p className="font-bold">{formatRupiah(order.value)}</p>
-              <p className="text-sm text-emerald-700">Commission {formatRupiah(order.commission)}</p>
-            </div>
-            <div className="grid gap-2">
-              <span className={`w-fit rounded px-3 py-1 text-xs font-bold capitalize ${statusStyles[order.status]}`}>{order.status}</span>
-              {order.status === "assigned" && <span className="text-xs font-bold text-slate-500">Waiting for worker submission</span>}
-            </div>
-          </article>
-        )) : (
-          <p className="rounded bg-slate-50 p-4 text-sm text-slate-500">No order records in this admin scope yet.</p>
+        }
+      >
+        {message && (
+          <p className={`mb-4 rounded px-3 py-2 text-sm font-bold ${message.includes("berhasil") ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>
+            {message}
+          </p>
         )}
-      </div>
-    </Panel>
+        <Filters />
+        <div className="mt-4 overflow-x-auto rounded border border-slate-200">
+          <table className="min-w-[1180px] w-full border-collapse bg-white text-sm">
+            <thead className="bg-slate-900 text-left text-xs uppercase text-white">
+              <tr>
+                <Th>Order Code</Th>
+                <Th>User</Th>
+                <Th>Customer Name</Th>
+                <Th>User Balance</Th>
+                <Th>Product</Th>
+                <Th>Quantity</Th>
+                <Th>Total Price</Th>
+                <Th>Commission</Th>
+                <Th>Status</Th>
+                <Th>Task</Th>
+                <Th>Date</Th>
+                <Th>Action</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {orderedRows.length ? (
+                orderedRows.map((order) => {
+                  const member = members.find((item) => item.id === order.memberId || item.username === order.member);
+                  const assignedProducts = order.assignedProducts?.length
+                    ? order.assignedProducts
+                    : order.productName
+                      ? [{ name: order.productName, code: order.productCode ?? "", quantity: order.quantity ?? 1 }]
+                      : [];
+                  const orderState = getOrderState(order);
+                  const isCompleted = orderState === "diserahkan";
+                  const hasProduct = assignedProducts.length > 0;
+
+                  return (
+                    <tr key={order.id} className="border-t border-slate-200 align-top">
+                      <Td>{order.referenceNumber ?? order.id}</Td>
+                      <Td>{order.member}</Td>
+                      <Td>{member?.username ?? order.member}</Td>
+                      <Td>{formatRupiah(member?.balance ?? 0)}</Td>
+                      <Td>
+                        {hasProduct ? (
+                          <div className="grid gap-1">
+                            {assignedProducts.map((product) => (
+                              <span key={`${order.id}-${product.code}-${product.name}`} className="font-semibold text-slate-800">
+                                {product.name}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-slate-400">Waiting product</span>
+                        )}
+                      </Td>
+                      <Td>{order.quantity ?? 0}</Td>
+                      <Td>{formatRupiah(order.value ?? 0)}</Td>
+                      <Td>{formatRupiah(order.commission ?? 0)}</Td>
+                      <Td>
+                        <span className={`inline-flex rounded px-2 py-1 text-xs font-black ${isCompleted ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                          {isCompleted ? "Completed" : "Pending"}
+                        </span>
+                      </Td>
+                      <Td>{hasProduct ? "Product assigned" : "Waiting assignment"}</Td>
+                      <Td>{shortDate(order.createdAt)}</Td>
+                      <Td>
+                        {!hasProduct && !isCompleted ? (
+                          <button
+                            className="inline-flex items-center gap-1 rounded bg-sky-600 px-3 py-2 text-xs font-black text-white hover:bg-sky-700"
+                            onClick={() => openProductModal(order)}
+                          >
+                            <PackagePlus size={14} /> Add Product
+                          </button>
+                        ) : (
+                          <span className="inline-flex rounded bg-slate-100 px-3 py-2 text-xs font-black text-slate-600">
+                            Product Selected
+                          </span>
+                        )}
+                      </Td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan={12} className="p-6 text-center text-sm text-slate-500">
+                    No order records in this admin scope yet.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Panel>
+
+      {targetOrder && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-slate-900/45 px-4">
+          <div className="w-full max-w-2xl rounded bg-white shadow-panel">
+            <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+              <div>
+                <h3 className="text-lg font-black">Tambah Produk ke Pesanan</h3>
+                <p className="text-xs font-semibold text-slate-500">{targetOrder.referenceNumber}</p>
+              </div>
+              <button className="grid h-9 w-9 place-items-center rounded-full hover:bg-slate-100" onClick={closeProductModal}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="max-h-[65vh] overflow-y-auto p-5">
+              {products.length ? (
+                <div className="grid gap-3">
+                  {pagedProducts.map((product) => (
+                    <button
+                      key={product.id}
+                      type="button"
+                      className={`grid grid-cols-[64px_1fr_auto] items-center gap-3 rounded border p-3 text-left transition hover:border-forest ${selectedProductId === product.id ? "border-forest bg-mint" : "border-slate-200"}`}
+                      onClick={() => setSelectedProductId(product.id)}
+                    >
+                      <img className="h-16 w-16 rounded object-cover" src={product.image} alt={product.name} />
+                      <span className="min-w-0">
+                        <span className="block truncate font-black text-slate-800">{product.name}</span>
+                        <span className="block text-xs font-semibold text-slate-500">{product.code} · Stock {product.quantity}</span>
+                      </span>
+                      <span className="text-right text-sm font-black text-forest">{formatRupiah(product.price)}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="rounded bg-slate-50 p-5 text-center text-sm text-slate-500">No products available. Add products in Catalog first.</p>
+              )}
+
+              <div className="mt-4 flex items-center justify-between">
+                <button
+                  className="inline-flex items-center gap-1 rounded border border-slate-200 px-3 py-2 text-sm font-bold disabled:text-slate-300"
+                  disabled={productPage === 0}
+                  onClick={() => setProductPage((page) => Math.max(0, page - 1))}
+                >
+                  <ChevronLeft size={16} /> Previous
+                </button>
+                <span className="text-xs font-bold text-slate-500">
+                  Page {productPage + 1} of {productPages}
+                </span>
+                <button
+                  className="inline-flex items-center gap-1 rounded border border-slate-200 px-3 py-2 text-sm font-bold disabled:text-slate-300"
+                  disabled={productPage >= productPages - 1}
+                  onClick={() => setProductPage((page) => Math.min(productPages - 1, page + 1))}
+                >
+                  Next <ChevronRight size={16} />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex gap-3 border-t border-slate-100 px-5 py-4">
+              <button className="flex-1 rounded border border-slate-200 px-4 py-3 font-black hover:bg-slate-50" onClick={closeProductModal}>
+                Cancel
+              </button>
+              <button
+                className="flex-1 inline-flex items-center justify-center gap-2 rounded bg-forest px-4 py-3 font-black text-white disabled:bg-slate-400"
+                disabled={isSaving || !selectedProductId}
+                onClick={saveProductAssignment}
+              >
+                <CheckCircle2 size={18} /> {isSaving ? "Saving..." : "Save"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
+}
+
+function Th({ children }: { children: React.ReactNode }) {
+  return <th className="border-r border-slate-700 px-3 py-3 font-black last:border-r-0">{children}</th>;
+}
+
+function Td({ children }: { children: React.ReactNode }) {
+  return <td className="border-r border-slate-100 px-3 py-4 last:border-r-0">{children}</td>;
 }

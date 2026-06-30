@@ -1,15 +1,15 @@
-import { CreditCard, Home, ReceiptText, ShoppingBag, User } from "lucide-react";
+import { Headphones, Home, ReceiptText, ShoppingBag, User } from "lucide-react";
 import type { Navigate } from "../../App";
 
-export default function BottomNavbar({ isLoggedIn, navigate }: { isLoggedIn?: boolean; navigate: Navigate }) {
+export default function BottomNavbar({ isLoggedIn, navigate, active = "home" }: { isLoggedIn?: boolean; navigate: Navigate; active?: "home" | "orders" | "claim" | "service" | "profile" }) {
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200 bg-white md:hidden">
       <div className="grid grid-cols-5 text-xs font-semibold text-slate-500">
-        <BottomNav icon={<Home />} label="Home" active />
-        <BottomNav icon={<ReceiptText />} label="Task Order" />
-        <BottomNav icon={<ShoppingBag />} label="Take Order" raised />
-        <BottomNav icon={<CreditCard />} label="Customer Service" onClick={() => navigate("/service")} />
-        <BottomNav icon={<User />} label={isLoggedIn ? "Profile" : "Login"} onClick={() => navigate(isLoggedIn ? "/profile" : "/login")} />
+        <BottomNav icon={<Home />} label="Home" active={active === "home"} onClick={() => navigate("/")} />
+        <BottomNav icon={<ReceiptText />} label="Tugas Pesanan" active={active === "orders"} onClick={() => navigate("/orders")} />
+        <BottomNav icon={<ShoppingBag />} label="Ambil Pesanan" active={active === "claim"} raised onClick={() => navigate("/")} />
+        <BottomNav icon={<Headphones />} label="Layanan Pelanggan" active={active === "service"} onClick={() => navigate("/service")} />
+        <BottomNav icon={<User />} label={isLoggedIn ? "Profile" : "Login"} active={active === "profile"} onClick={() => navigate(isLoggedIn ? "/profile" : "/login")} />
       </div>
     </nav>
   );

@@ -116,10 +116,10 @@ export default function TransactionManagementTable({ transactions, members }: { 
                     <p className="text-2xl font-black text-forest">{formatRupiah(transaction.amount)}</p>
                     <span className={`inline-block mt-1 px-2 py-1 rounded text-xs font-bold ${getStatusBadge(transaction.status)}`}>
                       {transaction.status === "pending"
-                        ? "Waiting"
+                        ? "Menunggu"
                         : transaction.status === "approved"
-                          ? "Completed"
-                          : "Cancelled"}
+                          ? "Selesai"
+                          : "Ditolak"}
                     </span>
                   </div>
 

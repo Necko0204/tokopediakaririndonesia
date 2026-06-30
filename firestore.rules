@@ -120,7 +120,10 @@ service cloud.firestore {
         'assignedAt',
         'completedAt',
         'submittedAt',
-        'shippedAt'
+        'shippedAt',
+        'rating',
+        'review',
+        'reviewedAt'
       ])
       && isString(request.resource.data.id)
       && isString(request.resource.data.referenceNumber)
@@ -143,9 +146,25 @@ service cloud.firestore {
       && isOptionalString(request.resource.data.completedAt)
       && isOptionalString(request.resource.data.submittedAt)
       && isOptionalString(request.resource.data.shippedAt)
+      && (
+        !request.resource.data.keys().hasAny(['rating'])
+        || isNumber(request.resource.data.rating)
+      )
+      && (
+        !request.resource.data.keys().hasAny(['review'])
+        || isOptionalString(request.resource.data.review)
+      )
+      && (
+        !request.resource.data.keys().hasAny(['reviewedAt'])
+        || isOptionalString(request.resource.data.reviewedAt)
+      )
       && request.resource.data.value >= 0
       && request.resource.data.commission >= 0
-      && request.resource.data.requiredBalance >= 0;
+      && request.resource.data.requiredBalance >= 0
+      && (
+        !request.resource.data.keys().hasAny(['rating'])
+        || (request.resource.data.rating >= 1 && request.resource.data.rating <= 5)
+      );
     }
 
     function isValidTransactionCreate() {

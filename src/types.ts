@@ -99,6 +99,9 @@ export interface Order {
   completedAt?: string;
   submittedAt?: string;
   shippedAt?: string;
+  rating?: number;
+  review?: string;
+  reviewedAt?: string;
 }
 
 export interface AppState {

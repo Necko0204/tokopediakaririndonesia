@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import AdminLoginPage from "./pages/AdminLoginPage";
 import AdminPage from "./pages/AdminPage";
 import CustomerPage from "./pages/CustomerPage";
+import CustomerOrdersPage from "./pages/CustomerOrdersPage";
 import CustomerServicePage from "./pages/CustomerServicePage";
 import LoginPage from "./pages/LoginPage";
 import ProfilePage from "./pages/ProfilePage";
@@ -33,6 +34,8 @@ function App() {
         <RegisterPage navigate={navigate} />
       ) : path.startsWith("/service") ? (
         <CustomerServicePage navigate={navigate} />
+      ) : path.startsWith("/orders") ? (
+        <CustomerOrdersPage navigate={navigate} />
       ) : path.startsWith("/login") ? (
         <LoginPage navigate={navigate} />
       ) : path.startsWith("/profile") ? (
