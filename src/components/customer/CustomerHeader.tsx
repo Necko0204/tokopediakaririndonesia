@@ -21,22 +21,25 @@ interface CustomerHeaderProps {
 
 export default function CustomerHeader({ query, activeUsername, notifications, onQueryChange, onLogout, navigate }: CustomerHeaderProps) {
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
-      <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3 sm:px-6">
-        <button className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded bg-white shadow-sm ring-1 ring-emerald-100" onClick={() => navigate("/")} aria-label="Go to customer store">
-          <img className="h-full w-full object-cover" src={customerLogo} alt="Tokopedia work account" />
+    <header className="sticky top-0 z-40 border-b border-emerald-100/70 bg-white/90 shadow-[0_8px_24px_rgba(15,23,42,0.04)] backdrop-blur-xl">
+      <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 sm:gap-4 sm:px-6">
+        <button className="flex h-11 shrink-0 items-center gap-2 rounded-2xl bg-white px-1.5 pr-3 shadow-sm ring-1 ring-emerald-100 hover:shadow-panel" onClick={() => navigate("/")} aria-label="Go to customer store">
+          <span className="grid h-8 w-8 overflow-hidden rounded-xl">
+            <img className="h-full w-full object-cover" src={customerLogo} alt="Tokopedia work account" />
+          </span>
+          <span className="hidden text-sm font-black tracking-tight text-forest sm:inline">tokopedia</span>
         </button>
         <div className="relative min-w-0 flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
           <input
-            className="h-11 w-full rounded-full border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm outline-none focus:border-forest"
+            className="h-11 w-full rounded-full border border-slate-200 bg-slate-50/80 pl-10 pr-4 text-sm outline-none focus:border-forest focus:bg-white"
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
             placeholder="Search products or order code"
           />
         </div>
         <div className="group relative">
-          <button className="relative grid h-10 w-10 place-items-center rounded-full border border-slate-200 text-slate-600 hover:bg-slate-50" aria-label="Notifications">
+          <button className="relative grid h-10 w-10 place-items-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm hover:border-emerald-200 hover:bg-mint hover:text-forest" aria-label="Notifications">
             <Bell size={18} />
             {notifications.length > 0 && (
               <span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-coral px-1 text-[10px] font-black text-white">
@@ -82,7 +85,7 @@ export default function CustomerHeader({ query, activeUsername, notifications, o
         </div>
         {activeUsername ? (
           <div className="group relative hidden sm:block">
-            <button className="rounded bg-slate-900 px-4 py-2 text-sm font-bold text-white">
+            <button className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white shadow-sm hover:bg-forest">
               {activeUsername}
             </button>
             <div className="invisible absolute right-0 top-full z-50 w-52 pt-2 opacity-0 transition group-hover:visible group-hover:opacity-100">
@@ -112,7 +115,7 @@ export default function CustomerHeader({ query, activeUsername, notifications, o
             </div>
           </div>
         ) : (
-          <button className="hidden rounded bg-forest px-4 py-2 text-sm font-bold text-white sm:block" onClick={() => navigate("/login")}>
+          <button className="hidden rounded-xl bg-forest px-4 py-2 text-sm font-bold text-white shadow-sm hover:bg-emerald-700 sm:block" onClick={() => navigate("/login")}>
             Login
           </button>
         )}

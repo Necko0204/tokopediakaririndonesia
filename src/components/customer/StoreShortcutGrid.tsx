@@ -97,9 +97,9 @@ export default function StoreShortcutGrid({ navigate, onTopUp, onWithdraw, isLog
 
 function StoreShortcut({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
   return (
-    <button className="grid min-h-24 place-items-center rounded bg-white p-3 text-center text-xs font-bold shadow-panel sm:text-sm" onClick={onClick}>
-      <span className="grid h-12 w-12 place-items-center rounded bg-mint text-forest">{icon}</span>
-      {label}
+    <button className="group grid min-h-24 place-items-center rounded-3xl border border-white bg-white/95 p-3 text-center text-xs font-black shadow-[0_14px_38px_rgba(15,23,42,0.07)] ring-1 ring-slate-100 hover:-translate-y-1 hover:border-emerald-100 hover:shadow-[0_18px_48px_rgba(22,141,98,0.16)] sm:text-sm" onClick={onClick}>
+      <span className="grid h-12 w-12 place-items-center rounded-2xl bg-mint text-forest transition group-hover:bg-forest group-hover:text-white">{icon}</span>
+      <span className="mt-1">{label}</span>
     </button>
   );
 }

@@ -12,7 +12,7 @@ interface AdminSidebarProps {
 export default function AdminSidebar({ activeTab, tabs, persistence, onTabChange }: AdminSidebarProps) {
   return (
     <aside className="h-fit border-b border-slate-200 pb-4 lg:sticky lg:top-20 lg:border-b-0">
-      <div className="mb-4 overflow-hidden rounded bg-gradient-to-br from-emerald-600 to-teal-700 p-5 text-white shadow-panel">
+      <div className="mb-4 overflow-hidden rounded-[1.5rem] bg-[linear-gradient(145deg,#047857_0%,#0f9f6b_58%,#0f766e_100%)] p-5 text-white shadow-[0_22px_60px_rgba(15,118,110,0.24)]">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <p className="text-xs font-black uppercase tracking-[0.22em] text-emerald-100">System Status</p>
@@ -35,7 +35,7 @@ export default function AdminSidebar({ activeTab, tabs, persistence, onTabChange
             : "Running in local mode. Data will be stored locally until the connection is restored."}
         </p>
 
-        <div className="mt-5 rounded bg-white/12 p-4 ring-1 ring-white/15">
+        <div className="mt-5 rounded-2xl bg-white/12 p-4 ring-1 ring-white/15">
           <div className="flex items-center gap-3">
             <span className="grid h-9 w-9 shrink-0 place-items-center rounded bg-white/15">
               <Database size={18} />
@@ -57,7 +57,11 @@ export default function AdminSidebar({ activeTab, tabs, persistence, onTabChange
           <button
             key={tab}
             onClick={() => onTabChange(tab)}
-            className={`flex items-center gap-3 rounded px-3 py-3 text-left text-sm font-semibold ${activeTab === tab ? "bg-slate-900 text-white" : "bg-white text-slate-600 hover:bg-mint"}`}
+            className={`flex items-center gap-3 rounded-2xl px-3 py-3 text-left text-sm font-bold shadow-sm ${
+              activeTab === tab
+                ? "bg-slate-900 text-white shadow-[0_14px_32px_rgba(15,23,42,0.18)]"
+                : "bg-white text-slate-600 ring-1 ring-slate-100 hover:-translate-y-0.5 hover:bg-mint hover:text-forest"
+            }`}
           >
             {adminTabIcon(tab)}
             {tab}

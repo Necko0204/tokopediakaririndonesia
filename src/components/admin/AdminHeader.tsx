@@ -28,10 +28,10 @@ export default function AdminHeader({
   const [showNotifications, setShowNotifications] = useState(false);
 
   return (
-    <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
+    <header className="sticky top-0 z-30 border-b border-emerald-100/70 bg-white/90 shadow-[0_8px_24px_rgba(15,23,42,0.04)] backdrop-blur-xl">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
         <div className="flex items-center gap-3">
-          <div className="grid h-10 w-10 place-items-center overflow-hidden rounded bg-white shadow-sm ring-1 ring-emerald-100">
+          <div className="grid h-11 w-11 place-items-center overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-emerald-100">
             <img className="h-full w-full object-cover" src={customerLogo} alt="Tokopedia work account" />
           </div>
           <div>
@@ -40,7 +40,7 @@ export default function AdminHeader({
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button className="hidden rounded border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 sm:block" onClick={() => navigate("/")}>
+          <button className="hidden rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700 shadow-sm hover:border-emerald-200 hover:bg-mint hover:text-forest sm:block" onClick={() => navigate("/")}>
             Customer store
           </button>
           <div className="relative">
@@ -97,7 +97,7 @@ export default function AdminHeader({
             <p className="text-sm font-bold">{activeAdmin.name}</p>
             <p className="text-xs text-slate-500">{roleLabel(activeAdmin.role)}</p>
           </div>
-          <button className="inline-flex items-center gap-2 rounded bg-coral px-3 py-2 text-sm font-semibold text-white" onClick={onLogout}>
+          <button className="inline-flex items-center gap-2 rounded-xl bg-coral px-3 py-2 text-sm font-bold text-white shadow-sm hover:bg-red-500" onClick={onLogout}>
             <LogOut size={16} />
             <span className="hidden sm:inline">Sign out</span>
           </button>

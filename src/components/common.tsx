@@ -2,7 +2,7 @@ import { ChevronDown } from "lucide-react";
 
 export function Panel({ title, action, children }: { title: string; action?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <section className="rounded bg-white p-4 shadow-panel sm:p-5">
+    <section className="rounded-[1.35rem] border border-white bg-white/95 p-4 shadow-[0_18px_48px_rgba(15,23,42,0.07)] ring-1 ring-slate-100 sm:p-5">
       <div className="mb-4 flex items-center justify-between gap-3">
         <h2 className="text-lg font-black">{title}</h2>
         {action}

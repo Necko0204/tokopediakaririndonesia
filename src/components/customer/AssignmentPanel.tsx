@@ -77,9 +77,11 @@ export default function AssignmentPanel({
   // STATE 1: No Task
   if (state === "no_task") {
     return (
-      <div className="rounded bg-white p-6 shadow-panel">
+      <div className="rounded-3xl border border-white bg-white p-6 shadow-[0_18px_48px_rgba(15,23,42,0.08)] ring-1 ring-slate-100">
         <div className="text-center">
-          <Package size={48} className="mx-auto mb-4 text-slate-300" />
+          <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-3xl bg-slate-50 text-slate-300 ring-1 ring-slate-100">
+            <Package size={34} />
+          </div>
           <h3 className="text-lg font-bold mb-2">No Task Assigned</h3>
           <p className="text-sm text-slate-500 mb-6">
             Accept a task to get started with your orders.
@@ -87,7 +89,7 @@ export default function AssignmentPanel({
           <button
             onClick={onAcceptTask}
             disabled={isLoading}
-            className="w-full rounded bg-forest px-4 py-3 font-bold text-white hover:bg-forest/90 disabled:bg-slate-400"
+            className="w-full rounded-2xl bg-forest px-4 py-3 font-black text-white shadow-sm hover:-translate-y-0.5 hover:bg-emerald-700 hover:shadow-panel disabled:bg-slate-400"
           >
             {isLoading ? "Accepting..." : "Take Order"}
           </button>
@@ -99,9 +101,11 @@ export default function AssignmentPanel({
   // STATE 2: Waiting for Assignment
   if (state === "waiting_assignment") {
     return (
-      <div className="rounded bg-white p-6 shadow-panel border-2 border-amber-200">
+      <div className="rounded-3xl border border-amber-200 bg-white p-6 shadow-[0_18px_48px_rgba(15,23,42,0.08)]">
         <div className="flex items-start gap-4">
-          <Clock className="text-amber-600 flex-shrink-0 mt-1" size={24} />
+          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-amber-50 text-amber-600">
+            <Clock size={24} />
+          </span>
           <div className="flex-1">
             <h3 className="font-bold mb-2">Waiting for delivery</h3>
             <p className="text-sm text-slate-600 mb-4">
@@ -120,18 +124,18 @@ export default function AssignmentPanel({
   if (hasProducts) {
     return (
       <>
-        <div className="rounded bg-white p-6 shadow-panel">
+        <div className="rounded-3xl border border-white bg-white p-6 shadow-[0_18px_48px_rgba(15,23,42,0.08)] ring-1 ring-slate-100">
           <div className="mb-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-lg">Assigned Products</h3>
-              <span className="text-xs font-bold px-2 py-1 rounded bg-sky-100 text-sky-700">
+              <span className="rounded-full bg-sky-100 px-3 py-1 text-xs font-black text-sky-700">
                 {getOrderStateLabel(state)}
               </span>
             </div>
 
             <div className="space-y-3">
               {assignedProducts.map((product) => (
-                <div key={`${product.code}-${product.quantity}`} className="rounded border border-slate-200 p-4">
+                <div key={`${product.code}-${product.quantity}`} className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <p className="text-xs text-slate-500 uppercase">Product</p>
@@ -150,7 +154,7 @@ export default function AssignmentPanel({
               ))}
             </div>
 
-            <div className="rounded bg-slate-50 p-4 mb-4">
+            <div className="mb-4 rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
               <p className="text-xs text-slate-500 uppercase mb-2">Required Balance</p>
               <p className="font-bold text-lg">{formatRupiah(order?.requiredBalance || 0)}</p>
               <p className="text-xs text-slate-500 mt-2">Your balance: {formatRupiah(memberBalance)}</p>
@@ -161,14 +165,14 @@ export default function AssignmentPanel({
             <button
               onClick={handleSubmitClick}
               disabled={isLoading}
-              className="w-full rounded bg-emerald-600 px-4 py-3 font-bold text-white hover:bg-emerald-700 disabled:bg-slate-400"
+              className="w-full rounded-2xl bg-emerald-600 px-4 py-3 font-black text-white shadow-sm hover:-translate-y-0.5 hover:bg-emerald-700 hover:shadow-panel disabled:bg-slate-400"
             >
               {isLoading ? "Submitting..." : state === "product_assigned" ? "Send Order" : "Yes, Send"}
             </button>
           )}
 
           {(state === "belum_diserahkan" || state === "diserahkan") && (
-            <div className="rounded bg-emerald-50 p-4 border border-emerald-200">
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
               <div className="flex items-start gap-2">
                 <CheckCircle2 size={20} className="text-emerald-600 flex-shrink-0 mt-0.5" />
                 <div>
@@ -190,7 +194,7 @@ export default function AssignmentPanel({
                     <button
                       onClick={onConfirmDelivery}
                       disabled={isLoading}
-                      className="mt-3 w-full rounded bg-forest px-3 py-2 text-xs font-bold text-white disabled:bg-slate-400"
+                      className="mt-3 w-full rounded-xl bg-forest px-3 py-2 text-xs font-bold text-white disabled:bg-slate-400"
                     >
                       Confirm Shipment
                     </button>
