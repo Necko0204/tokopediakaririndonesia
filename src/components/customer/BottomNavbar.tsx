@@ -7,7 +7,7 @@ export default function BottomNavbar({ isLoggedIn, navigate, active = "home" }: 
       <div className="grid min-h-[76px] grid-cols-5 text-xs font-semibold text-slate-500">
         <BottomNav icon={<Home />} label="Home" active={active === "home"} onClick={() => navigate("/")} />
         <BottomNav icon={<ReceiptText />} label="Task Orders" active={active === "orders"} onClick={() => navigate("/orders")} />
-        <BottomNav icon={<Zap fill="currentColor" />} label="Take Order" active={active === "claim"} raised onClick={() => navigate("/")} />
+        <BottomNav icon={<Zap fill="currentColor" />} label="Take Order" active={active === "claim"} raised onClick={() => navigate("/take-order")} />
         <BottomNav icon={<Headphones />} label="Customer Service" active={active === "service"} onClick={() => navigate("/service")} />
         <BottomNav icon={<User />} label={isLoggedIn ? "Profile" : "Login"} active={active === "profile"} onClick={() => navigate(isLoggedIn ? "/profile" : "/login")} />
       </div>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import AdminLoginPage from "./pages/AdminLoginPage";
 import AdminPage from "./pages/AdminPage";
+import CustomerDashboardPage from "./pages/CustomerDashboardPage";
 import CustomerPage from "./pages/CustomerPage";
 import CustomerOrdersPage from "./pages/CustomerOrdersPage";
 import CustomerServicePage from "./pages/CustomerServicePage";
@@ -37,6 +38,8 @@ function App() {
         <CustomerServicePage navigate={navigate} />
       ) : path.startsWith("/orders") ? (
         <CustomerOrdersPage navigate={navigate} />
+      ) : path.startsWith("/take-order") ? (
+        <CustomerPage navigate={navigate} />
       ) : path.startsWith("/topup") ? (
         <CustomerTransactionPage navigate={navigate} type="topup" />
       ) : path.startsWith("/withdraw") ? (
@@ -46,7 +49,7 @@ function App() {
       ) : path.startsWith("/profile") ? (
         <ProfilePage navigate={navigate} />
       ) : (
-        <CustomerPage navigate={navigate} />
+        <CustomerDashboardPage navigate={navigate} />
       )}
     </AppStoreProvider>
   );

@@ -289,7 +289,7 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
         </div>
       </section>
 
-      <BottomNavbar isLoggedIn={Boolean(activeCustomerId)} navigate={navigate} />
+      <BottomNavbar isLoggedIn={Boolean(activeCustomerId)} navigate={navigate} active="claim" />
       {activeModal && currentMember && (
         <TransactionModal type={activeModal} member={currentMember.username} admin={currentMember.referredBy} banks={state.banks} onClose={() => setActiveModal(null)} />
       )}
