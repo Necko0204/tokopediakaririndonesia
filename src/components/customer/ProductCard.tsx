@@ -21,8 +21,14 @@ export default function ProductCard({ product, isFavorite, onToggleFavorite, onT
             <p className="text-xs font-bold uppercase text-forest">{product.code}</p>
             <h3 className="mt-1 min-h-12 font-bold">{product.name}</h3>
           </div>
-          <button className={`grid h-9 w-9 shrink-0 place-items-center rounded-full shadow-sm ${isFavorite ? "bg-coral text-white" : "bg-rose-50 text-coral hover:bg-coral hover:text-white"}`} aria-label="Favorite" onClick={onToggleFavorite}>
-            <Heart size={17} />
+          <button
+            type="button"
+            className={`grid h-9 w-9 shrink-0 place-items-center rounded-full shadow-sm transition ${isFavorite ? "bg-coral text-white" : "bg-rose-50 text-coral hover:bg-coral hover:text-white"}`}
+            aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
+            aria-pressed={isFavorite}
+            onClick={onToggleFavorite}
+          >
+            <Heart size={17} fill={isFavorite ? "currentColor" : "none"} />
           </button>
         </div>
         <p className="mt-3 text-lg font-black">{formatRupiah(product.price)}</p>

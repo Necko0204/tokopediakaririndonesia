@@ -15,9 +15,12 @@ import { clearActiveCustomerId, getActiveCustomerId } from "../services/customer
 import { completeWorkflowOrder, createOrder, submitWorkflowOrder, updateOrderStatus } from "../services/ordersService";
 import { getOrderCode } from "../services/orderCode";
 import { getOrderState } from "../services/orderStateService";
+import { updateMember } from "../services/membersService";
 import { useAppStore } from "../store/AppStore";
 import type { Order, Product } from "../types";
 import { formatRupiah, shortDate } from "../utils";
+
+const favoriteStoragePrefix = "tokopedia-product-favorites";
 
 export default function CustomerPage({ navigate }: { navigate: Navigate }) {
   const { state, dispatch, ready } = useAppStore();
@@ -32,6 +35,7 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
   const [activeCustomerId, setActiveCustomerIdState] = useState(() => getActiveCustomerId());
 
   const currentMember = activeCustomerId ? state.members.find((member) => member.id === activeCustomerId) : undefined;
+  const favoriteStorageKey = currentMember ? `${favoriteStoragePrefix}:${currentMember.id}` : `${favoriteStoragePrefix}:guest`;
 
   useEffect(() => {
     const storedCustomerId = getActiveCustomerId();
@@ -42,6 +46,27 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
       setActiveCustomerIdState(null);
     }
   }, [ready, state.members]);
+
+  useEffect(() => {
+    if (currentMember && Array.isArray(currentMember.favoriteProductIds)) {
+      setFavorites(currentMember.favoriteProductIds);
+      try {
+        window.localStorage.setItem(favoriteStorageKey, JSON.stringify(currentMember.favoriteProductIds));
+      } catch (error) {
+        console.warn("Unable to cache product favorites:", error);
+      }
+      return;
+    }
+
+    try {
+      const storedFavorites = window.localStorage.getItem(favoriteStorageKey);
+      const parsedFavorites = storedFavorites ? JSON.parse(storedFavorites) : [];
+      setFavorites(Array.isArray(parsedFavorites) ? parsedFavorites : []);
+    } catch (error) {
+      console.warn("Unable to load product favorites:", error);
+      setFavorites([]);
+    }
+  }, [currentMember, favoriteStorageKey]);
 
   const activeOrder = currentMember
     ? state.orders.find((order) => 
@@ -89,8 +114,27 @@ export default function CustomerPage({ navigate }: { navigate: Navigate }) {
     [query, state.products],
   );
 
-  const toggleFavorite = (productId: string) => {
-    setFavorites((items) => (items.includes(productId) ? items.filter((id) => id !== productId) : [...items, productId]));
+  const toggleFavorite = async (productId: string) => {
+    const nextFavorites = favorites.includes(productId) ? favorites.filter((id) => id !== productId) : Array.from(new Set([...favorites, productId]));
+    setFavorites(nextFavorites);
+
+    try {
+      window.localStorage.setItem(favoriteStorageKey, JSON.stringify(nextFavorites));
+    } catch (error) {
+      console.warn("Unable to cache product favorites:", error);
+    }
+
+    if (!currentMember) return;
+
+    const updatedMember = { ...currentMember, favoriteProductIds: nextFavorites };
+    dispatch({ type: "updateMember", payload: updatedMember });
+
+    try {
+      await updateMember(currentMember.id, { favoriteProductIds: nextFavorites });
+    } catch (error) {
+      console.error("Unable to sync favorites to Firebase:", error);
+      setTaskMessage("Favorite saved on this device, but Firebase sync failed. Check Firestore rules.");
+    }
   };
 
   const handleAcceptTask = async () => {

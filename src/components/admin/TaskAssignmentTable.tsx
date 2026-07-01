@@ -14,6 +14,8 @@ interface TaskAssignmentTableProps {
   products: Product[];
 }
 
+const taskTarget = 15;
+
 export default function TaskAssignmentTable({ orders, members, products }: TaskAssignmentTableProps) {
   const { dispatch } = useAppStore();
   const [showAssignForm, setShowAssignForm] = useState(false);
@@ -23,6 +25,12 @@ export default function TaskAssignmentTable({ orders, members, products }: TaskA
   const [message, setMessage] = useState("");
   const [activeQueue, setActiveQueue] = useState<"action" | "progress" | "archive">("action");
   const [query, setQuery] = useState("");
+
+  const openAssignFormForOrder = (orderId?: string) => {
+    setShowAssignForm(true);
+    setSelectedOrderId(orderId ?? "");
+    setMessage("");
+  };
 
   // Filter orders that are waiting for assignment
   const waitingAssignmentOrders = orders.filter((order) => order.status === "waiting_assignment" || order.status === "waiting");
@@ -118,7 +126,7 @@ export default function TaskAssignmentTable({ orders, members, products }: TaskA
       title="Task Assignment Dashboard"
       action={
         <button 
-          onClick={() => setShowAssignForm(!showAssignForm)}
+          onClick={() => (showAssignForm ? setShowAssignForm(false) : openAssignFormForOrder())}
           className="inline-flex items-center gap-2 rounded bg-forest px-3 py-2 text-sm font-semibold text-white"
         >
           <Plus size={16} /> Add Task
@@ -266,12 +274,32 @@ export default function TaskAssignmentTable({ orders, members, products }: TaskA
         </div>
       </div>
 
-      <div className="max-h-[640px] overflow-y-auto pr-1">
-        <div className="grid gap-3">
+      <div className="max-h-[640px] overflow-auto rounded border border-slate-200 bg-white">
+        <table className="w-full min-w-[1460px] border-separate border-spacing-0 text-left text-[13px]">
+          <thead className="sticky top-0 z-10 bg-slate-900 text-xs uppercase text-white">
+            <tr>
+              <TaskTh>Code</TaskTh>
+              <TaskTh>User</TaskTh>
+              <TaskTh>Name</TaskTh>
+              <TaskTh>User Balance</TaskTh>
+              <TaskTh>Product</TaskTh>
+              <TaskTh>Quantity</TaskTh>
+              <TaskTh>Total Price</TaskTh>
+              <TaskTh>Commission</TaskTh>
+              <TaskTh>Balance Shortage</TaskTh>
+              <TaskTh>Status</TaskTh>
+              <TaskTh>Task</TaskTh>
+              <TaskTh>Date</TaskTh>
+              <TaskTh>Action</TaskTh>
+            </tr>
+          </thead>
+          <tbody>
         {visibleOrders.length === 0 ? (
-          <p className="rounded border border-dashed border-slate-200 bg-slate-50 p-6 text-center text-sm text-slate-500">
-            No task records in this queue.
-          </p>
+          <tr>
+            <td colSpan={13} className="p-6 text-center text-sm text-slate-500">
+              No task records in this queue.
+            </td>
+          </tr>
         ) : (
           visibleOrders.map((order) => {
             const member = members.find((m) => m.username === order.member);
@@ -280,49 +308,94 @@ export default function TaskAssignmentTable({ orders, members, products }: TaskA
               : order.productCode
                 ? [{ code: order.productCode, name: order.productName ?? "Assigned product", quantity: order.quantity ?? 1, price: order.value, total: order.value, commission: order.commission, productId: order.productCode }]
                 : [];
+            const totalQuantity = assignedProducts.reduce((sum, product) => sum + (product.quantity || 0), 0);
+            const totalPrice = order.value || assignedProducts.reduce((sum, product) => sum + (product.total || product.price * product.quantity || 0), 0);
+            const userBalance = member?.balance ?? 0;
+            const shortage = Math.max(0, (order.requiredBalance ?? totalPrice) - userBalance);
+            const state = getOrderState(order);
+            const hasProduct = assignedProducts.length > 0;
+            const taskProgress = getMemberTaskProgress(order, orders);
             
             return (
-              <div
-                key={order.id}
-                className="rounded border border-slate-200 bg-white p-4 transition hover:border-forest/30 hover:shadow-sm"
-              >
-                <div className="grid gap-4 lg:grid-cols-[1.1fr_1.4fr_0.9fr_0.9fr] lg:items-center">
-                  <div>
-                    <p className="text-xs font-black uppercase text-slate-500">Member</p>
-                    <p className="mt-1 font-black text-slate-900">{member?.username || order.member || "Unknown"}</p>
-                    <p className="mt-1 break-words text-xs font-semibold text-slate-500">{getOrderCode(order)}</p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs font-black uppercase text-slate-500">Product</p>
-                    <p className="mt-1 font-black text-slate-900">{assignedProducts.length ? `${assignedProducts.length} product(s)` : "Pending assignment"}</p>
-                    <p className="mt-1 break-words text-xs text-slate-600">
-                      {assignedProducts.map((product) => `${product.code} x${product.quantity}`).join(", ") || "No product assigned yet"}
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs font-black uppercase text-slate-500">Amount</p>
-                    <p className="mt-1 font-black">{formatRupiah(order.value || 0)}</p>
-                    <p className="text-xs text-emerald-700">Comm: {formatRupiah(order.commission || 0)}</p>
-                  </div>
-
-                  <div className="lg:text-right">
-                    <p className="text-xs font-black uppercase text-slate-500">Date</p>
-                    <p className="mt-1 text-sm font-black">{shortDate(order.createdAt)}</p>
-                    <span className={`mt-2 inline-flex rounded px-2 py-1 text-xs font-black ${getStatusColor(order.status)}`}>
-                      {getOrderStateLabel(getOrderState(order))}
+              <tr key={order.id} className="align-top transition hover:bg-slate-50">
+                <TaskTd>
+                  <span className="block max-w-[160px] break-words font-black text-forest">{getOrderCode(order)}</span>
+                </TaskTd>
+                <TaskTd>
+                  <span className="block max-w-[130px] break-words font-semibold text-slate-900">{member?.phone || order.member || "-"}</span>
+                </TaskTd>
+                <TaskTd>
+                  <p className="font-black text-slate-900">{member?.username || order.member || "Unknown"}</p>
+                  <p className="text-xs text-slate-500">ID: {member?.id ?? "-"}</p>
+                </TaskTd>
+                <TaskTd>{formatRupiah(userBalance)}</TaskTd>
+                <TaskTd>
+                  {hasProduct ? (
+                    <span className="block max-w-[270px] whitespace-pre-line font-semibold leading-5 text-slate-800">
+                      {assignedProducts.map((product) => `${product.name}\n${product.code} x${product.quantity}`).join("\n")}
                     </span>
-                  </div>
-                </div>
-              </div>
+                  ) : (
+                    <span className="text-slate-400">Pending assignment</span>
+                  )}
+                </TaskTd>
+                <TaskTd>{totalQuantity}</TaskTd>
+                <TaskTd>{formatRupiah(totalPrice)}</TaskTd>
+                <TaskTd>{formatRupiah(order.commission || 0)}</TaskTd>
+                <TaskTd>
+                  {shortage > 0 ? <span className="font-black text-red-600">(-{formatRupiah(shortage).replace(/^Rp\s?/, "Rp")})</span> : <span className="text-slate-500">-</span>}
+                </TaskTd>
+                <TaskTd>
+                  <span className={`inline-flex rounded px-2 py-1 text-xs font-black ${getStatusColor(order.status)}`}>
+                    {state === "diserahkan" ? "Completed" : "Pending"}
+                  </span>
+                </TaskTd>
+                <TaskTd>
+                  <span className="font-black text-slate-900">Task {taskProgress} / {taskTarget}</span>
+                  <span className="block text-xs text-slate-500">{getOrderStateLabel(state)}</span>
+                </TaskTd>
+                <TaskTd>{shortDate(order.createdAt)}</TaskTd>
+                <TaskTd>
+                  {state === "waiting_assignment" ? (
+                    <button
+                      className="inline-flex items-center gap-1 rounded bg-sky-600 px-3 py-2 text-xs font-black text-white hover:bg-sky-700"
+                      onClick={() => openAssignFormForOrder(order.id)}
+                    >
+                      <Plus size={14} /> Add Task
+                    </button>
+                  ) : state === "diserahkan" ? (
+                    <span className="rounded bg-emerald-100 px-3 py-2 text-xs font-black text-emerald-700">Product Selected</span>
+                  ) : (
+                    <span className="inline-flex max-w-[150px] rounded bg-amber-100 px-3 py-2 text-xs font-black leading-4 text-amber-700">
+                      Product selected, waiting for completion
+                    </span>
+                  )}
+                </TaskTd>
+              </tr>
             );
           })
         )}
-        </div>
+          </tbody>
+        </table>
       </div>
     </Panel>
   );
+}
+
+function getMemberTaskProgress(order: Order, orders: Order[]) {
+  const memberKey = order.memberId || order.member;
+  const memberOrders = orders
+    .filter((item) => (item.memberId || item.member) === memberKey)
+    .sort((left, right) => new Date(left.createdAt.replace(" ", "T")).getTime() - new Date(right.createdAt.replace(" ", "T")).getTime());
+  const index = memberOrders.findIndex((item) => item.id === order.id);
+  return Math.min(taskTarget, Math.max(1, index + 1));
+}
+
+function TaskTh({ children }: { children: React.ReactNode }) {
+  return <th className="border-r border-slate-700 px-3 py-3 font-black last:border-r-0">{children}</th>;
+}
+
+function TaskTd({ children }: { children: React.ReactNode }) {
+  return <td className="border-b border-slate-200 border-r border-slate-100 px-3 py-3 align-top last:border-r-0">{children}</td>;
 }
 
 function getQueueCounts(orders: Order[]) {

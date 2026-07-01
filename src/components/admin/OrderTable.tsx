@@ -11,6 +11,7 @@ import Filters from "./Filters";
 
 const productPageSize = 5;
 const rowPageSize = 10;
+const taskTarget = 15;
 
 export default function OrderTable({ orders, members, products }: { orders: Order[]; members: Member[]; products: Product[] }) {
   const { dispatch } = useAppStore();
@@ -130,17 +131,19 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
             <span className="rounded bg-white px-3 py-1 text-xs font-black text-slate-600 shadow-sm">10 per page</span>
           </div>
 
-          <div className="hidden overflow-x-auto xl:block">
-          <table className="w-full min-w-[1120px] border-separate border-spacing-0 bg-white text-left text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[1540px] border-separate border-spacing-0 bg-white text-left text-[13px]">
             <thead className="bg-slate-900 text-left text-xs uppercase text-white">
               <tr>
                 <Th>Order Code</Th>
-                <Th>Member</Th>
+                <Th>User</Th>
+                <Th>Name</Th>
                 <Th>User Balance</Th>
                 <Th>Product</Th>
                 <Th>Quantity</Th>
                 <Th>Total Price</Th>
                 <Th>Commission</Th>
+                <Th>Balance Shortage</Th>
                 <Th>Status</Th>
                 <Th>Task</Th>
                 <Th>Date</Th>
@@ -159,7 +162,10 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
                   const orderState = getOrderState(order);
                   const isCompleted = orderState === "diserahkan";
                   const hasProduct = assignedProducts.length > 0;
-                  const taskLabel = isCompleted ? "Completed" : hasProduct ? "Pending delivery" : "Pending assignment";
+                  const userBalance = member?.balance ?? 0;
+                  const requiredBalance = order.requiredBalance ?? order.value ?? 0;
+                  const shortage = Math.max(0, requiredBalance - userBalance);
+                  const taskProgress = getMemberTaskProgress(order, orderedRows);
 
                   return (
                     <tr key={order.id} className="group align-top transition hover:bg-slate-50">
@@ -167,15 +173,19 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
                         <span className="block max-w-[150px] break-words font-black text-forest">{getOrderCode(order)}</span>
                       </Td>
                       <Td>
+                        <span className="block max-w-[130px] break-words font-semibold text-slate-900">{member?.phone || order.member}</span>
+                      </Td>
+                      <Td>
                         <OrderMemberCell order={order} member={member} />
                       </Td>
-                      <Td>{formatRupiah(member?.balance ?? 0)}</Td>
+                      <Td>{formatRupiah(userBalance)}</Td>
                       <Td>
                         {hasProduct ? (
                           <div className="grid gap-1">
                             {assignedProducts.map((product) => (
-                              <span key={`${order.id}-${product.code}-${product.name}`} className="font-semibold text-slate-800">
+                              <span key={`${order.id}-${product.code}-${product.name}`} className="max-w-[270px] whitespace-pre-line font-semibold leading-5 text-slate-800">
                                 {product.name}
+                                <span className="block text-xs font-medium text-slate-500">Product price: {formatRupiah(getAssignedProductTotal(product))}</span>
                               </span>
                             ))}
                           </div>
@@ -187,11 +197,20 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
                       <Td>{formatRupiah(order.value ?? 0)}</Td>
                       <Td>{formatRupiah(order.commission ?? 0)}</Td>
                       <Td>
+                        {shortage > 0 ? (
+                          <span className="font-black text-red-600">(-{formatRupiah(shortage).replace(/^Rp\s?/, "Rp")})</span>
+                        ) : (
+                          <span className="text-slate-500">-</span>
+                        )}
+                      </Td>
+                      <Td>
                         <span className={`inline-flex rounded px-2 py-1 text-xs font-black ${isCompleted ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
                           {isCompleted ? "Completed" : "Pending"}
                         </span>
                       </Td>
-                      <Td>{taskLabel}</Td>
+                      <Td>
+                        <span className="font-black text-slate-900">Task {taskProgress} / {taskTarget}</span>
+                      </Td>
                       <Td>{shortDate(order.createdAt)}</Td>
                       <Td>
                         {!hasProduct && !isCompleted ? (
@@ -216,71 +235,13 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
                 })
               ) : (
                 <tr>
-                  <td colSpan={11} className="p-6 text-center text-sm text-slate-500">
+                  <td colSpan={13} className="p-6 text-center text-sm text-slate-500">
                     {activeQueue === "pending" ? "No pending order records in this admin scope yet." : "No completed order records in this admin scope yet."}
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
-          </div>
-
-          <div className="grid gap-3 p-3 xl:hidden">
-            {pagedRows.length ? (
-              pagedRows.map((order) => {
-                const member = members.find((item) => item.id === order.memberId || item.username === order.member);
-                const assignedProducts = order.assignedProducts?.length
-                  ? order.assignedProducts
-                  : order.productName
-                    ? [{ name: order.productName, code: order.productCode ?? "", quantity: order.quantity ?? 1 }]
-                    : [];
-                const orderState = getOrderState(order);
-                const isCompleted = orderState === "diserahkan";
-                const hasProduct = assignedProducts.length > 0;
-                const taskLabel = isCompleted ? "Completed" : hasProduct ? "Pending delivery" : "Pending assignment";
-
-                return (
-                  <article key={order.id} className="rounded border border-slate-200 bg-white p-4 shadow-sm">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="break-words text-sm font-black text-forest">{getOrderCode(order)}</p>
-                        <OrderMemberCell order={order} member={member} />
-                      </div>
-                      <span className={`shrink-0 rounded px-2 py-1 text-xs font-black ${isCompleted ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
-                        {isCompleted ? "Completed" : "Pending"}
-                      </span>
-                    </div>
-                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                      <MobileOrderMetric label="User balance" value={formatRupiah(member?.balance ?? 0)} />
-                      <MobileOrderMetric label="Total price" value={formatRupiah(order.value ?? 0)} />
-                      <MobileOrderMetric label="Commission" value={formatRupiah(order.commission ?? 0)} />
-                      <MobileOrderMetric label="Quantity" value={String(order.quantity ?? 0)} />
-                      <MobileOrderMetric label="Task" value={taskLabel} wide />
-                      <MobileOrderMetric label="Date" value={shortDate(order.createdAt)} wide />
-                    </div>
-                    <div className="mt-4 rounded bg-slate-50 p-3">
-                      <p className="text-xs font-black uppercase tracking-wide text-slate-500">Product</p>
-                      {hasProduct ? (
-                        <div className="mt-1 grid gap-1">
-                          {assignedProducts.map((product) => (
-                            <p key={`${order.id}-${product.code}-${product.name}`} className="text-sm font-black text-slate-900">{product.name}</p>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="mt-1 text-sm font-semibold text-slate-400">Waiting product</p>
-                      )}
-                    </div>
-                    <div className="mt-4">
-                      <OrderAction hasProduct={hasProduct} isCompleted={isCompleted} onAdd={() => openProductModal(order)} />
-                    </div>
-                  </article>
-                );
-              })
-            ) : (
-              <p className="rounded bg-slate-50 p-6 text-center text-sm text-slate-500">
-                {activeQueue === "pending" ? "No pending order records in this admin scope yet." : "No completed order records in this admin scope yet."}
-              </p>
-            )}
           </div>
 
           <TablePagination page={rowPage} totalPages={totalRowPages} onPageChange={setRowPage} />
@@ -363,6 +324,15 @@ export default function OrderTable({ orders, members, products }: { orders: Orde
   );
 }
 
+function getMemberTaskProgress(order: Order, orders: Order[]) {
+  const memberKey = order.memberId || order.member;
+  const memberOrders = orders
+    .filter((item) => (item.memberId || item.member) === memberKey)
+    .sort((left, right) => new Date(left.createdAt.replace(" ", "T")).getTime() - new Date(right.createdAt.replace(" ", "T")).getTime());
+  const index = memberOrders.findIndex((item) => item.id === order.id);
+  return Math.min(taskTarget, Math.max(1, index + 1));
+}
+
 function OrderQueueButton({
   label,
   description,
@@ -399,18 +369,23 @@ function Th({ children }: { children: React.ReactNode }) {
 }
 
 function Td({ children }: { children: React.ReactNode }) {
-  return <td className="border-b border-slate-100 border-r border-slate-100 px-4 py-4 align-top last:border-r-0">{children}</td>;
+  return <td className="border-b border-slate-200 border-r border-slate-100 px-3 py-3 align-top last:border-r-0">{children}</td>;
 }
 
 function OrderMemberCell({ order, member }: { order: Order; member?: Member }) {
   return (
     <div className="min-w-0">
-      <p className="font-black text-slate-900">{member?.username ?? order.member}</p>
-      <p className="text-xs font-semibold text-slate-500">Username: {order.member}</p>
-      {member?.phone && <p className="text-xs text-coral">{member.phone}</p>}
+      <p className="max-w-[150px] break-words font-black text-slate-900">{member?.username ?? order.member}</p>
+      <p className="text-xs font-semibold text-slate-500">ID: {member?.id ?? "-"}</p>
       {member?.referredBy && <p className="text-xs text-slate-400">{member.referredBy}</p>}
     </div>
   );
+}
+
+function getAssignedProductTotal(product: { total?: number; price?: number; quantity?: number }) {
+  if (typeof product.total === "number") return product.total;
+  if (typeof product.price === "number") return product.price * (product.quantity ?? 1);
+  return 0;
 }
 
 function OrderAction({ hasProduct, isCompleted, onAdd }: { hasProduct: boolean; isCompleted: boolean; onAdd: () => void }) {
@@ -431,15 +406,6 @@ function OrderAction({ hasProduct, isCompleted, onAdd }: { hasProduct: boolean; 
   }
 
   return <span className="inline-flex rounded bg-emerald-100 px-3 py-2 text-xs font-black text-emerald-700">Completed</span>;
-}
-
-function MobileOrderMetric({ label, value, wide = false }: { label: string; value: string; wide?: boolean }) {
-  return (
-    <div className={`rounded bg-slate-50 p-3 ${wide ? "sm:col-span-2" : ""}`}>
-      <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">{label}</p>
-      <p className="mt-1 text-sm font-black text-slate-900">{value}</p>
-    </div>
-  );
 }
 
 function TablePagination({ page, totalPages, onPageChange }: { page: number; totalPages: number; onPageChange: (page: number) => void }) {

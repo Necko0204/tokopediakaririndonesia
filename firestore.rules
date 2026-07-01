@@ -247,7 +247,8 @@ service cloud.firestore {
         'totalOrders',
         'lastLogin',
         'accountPassword',
-        'withdrawalPassword'
+        'withdrawalPassword',
+        'favoriteProductIds'
       ])
       && request.resource.data.id == resource.data.id
       && isString(request.resource.data.username)
@@ -259,7 +260,14 @@ service cloud.firestore {
       && request.resource.data.balance >= 0
       && isNumber(request.resource.data.totalOrders)
       && request.resource.data.totalOrders >= 0
-      && isString(request.resource.data.lastLogin);
+      && isString(request.resource.data.lastLogin)
+      && (
+        !('favoriteProductIds' in request.resource.data)
+        || (
+          request.resource.data.favoriteProductIds is list
+          && request.resource.data.favoriteProductIds.size() <= 200
+        )
+      );
     }
 
     function isValidStaffCreate() {

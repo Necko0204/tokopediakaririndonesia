@@ -33,6 +33,7 @@ export interface Member {
   lastLogin: string;
   accountPassword?: string;
   withdrawalPassword?: string;
+  favoriteProductIds?: string[];
 }
 
 export interface Product {

@@ -73,7 +73,7 @@ export default function TransactionManagementTable({
 
       <div className="grid gap-6">
         <RequestTable
-          title="Top Up Requests"
+          title="Top Up History (Deposit)"
           tone="topup"
           emptyText="No top-up requests found."
           transactions={topUps}
@@ -85,7 +85,7 @@ export default function TransactionManagementTable({
           onReject={(transaction) => handleStatusChange(transaction, "rejected")}
         />
         <RequestTable
-          title="Withdrawal Requests"
+          title="Withdrawal History"
           tone="withdrawal"
           emptyText="No withdrawal requests found."
           transactions={withdrawals}
@@ -137,6 +137,7 @@ function RequestTable({
   const statusCounts = getStatusCounts(transactions);
   const visibleTransactions = transactions.filter((transaction) => transaction.status === statusView);
   const statusEmptyText = statusView === "pending" ? emptyText : `No ${statusView} ${tone === "topup" ? "top-up" : "withdrawal"} requests found.`;
+  const colSpan = tone === "topup" ? 8 : 6;
 
   return (
     <section className="overflow-hidden rounded border border-slate-200 bg-white shadow-sm">
@@ -175,18 +176,29 @@ function RequestTable({
       </div>
 
       <div className="max-h-[460px] overflow-auto">
-        <table className="min-w-[1020px] w-full border-separate border-spacing-0 text-left text-sm">
+        <table className="min-w-[1020px] w-full border-separate border-spacing-0 text-left text-[13px]">
           <thead className={`sticky top-0 z-20 bg-gradient-to-r ${headerTone} text-xs uppercase text-white shadow-sm`}>
-            <tr>
-              <Th className="w-[190px]">Request Code</Th>
-              <Th>Customer/User</Th>
-              <Th className="w-[130px]">Amount</Th>
-              <Th className="w-[170px]">Sender / Bank</Th>
-              <Th>Payment Proof</Th>
-              <Th className="w-[110px]">Status</Th>
-              <Th className="w-[130px]">Created Date</Th>
-              <Th className="sticky right-0 z-30 w-[168px] bg-slate-900 shadow-[-10px_0_18px_rgba(15,23,42,0.16)]">Action</Th>
-            </tr>
+            {tone === "topup" ? (
+              <tr>
+                <Th className="w-[170px]">Code</Th>
+                <Th className="w-[170px]">User</Th>
+                <Th className="w-[150px]">Sender</Th>
+                <Th className="w-[130px]">Amount</Th>
+                <Th>Transfer Proof / Note</Th>
+                <Th>Payment Method</Th>
+                <Th className="w-[110px]">Status</Th>
+                <Th className="sticky right-0 z-30 w-[150px] bg-slate-900 shadow-[-10px_0_18px_rgba(15,23,42,0.16)]">Action</Th>
+              </tr>
+            ) : (
+              <tr>
+                <Th className="w-[190px]">Code</Th>
+                <Th className="w-[170px]">User</Th>
+                <Th className="w-[140px]">Amount</Th>
+                <Th>Withdrawal Information</Th>
+                <Th className="w-[110px]">Status</Th>
+                <Th className="sticky right-0 z-30 w-[150px] bg-slate-900 shadow-[-10px_0_18px_rgba(15,23,42,0.16)]">Action</Th>
+              </tr>
+            )}
           </thead>
           <tbody>
             {visibleTransactions.length ? (
@@ -196,7 +208,7 @@ function RequestTable({
                 const isProcessing = isProcessingId === transaction.id;
 
                 return (
-                  <tr key={transaction.id} className={`group align-middle transition hover:bg-slate-50 ${isPending ? "bg-amber-50/70" : "bg-white"}`}>
+                  <tr key={transaction.id} className={`group align-middle transition hover:bg-slate-50 ${statusRowClass(transaction.status)}`}>
                     <Td className="border-t border-slate-200">
                       <span className="block max-w-[170px] break-words font-black leading-5 text-forest">{transaction.requestId ?? transaction.id}</span>
                     </Td>
@@ -204,39 +216,38 @@ function RequestTable({
                       <p className="max-w-[160px] break-words font-black text-slate-900">{transaction.member}</p>
                       <p className="max-w-[160px] break-words text-xs text-slate-500">{member?.phone ?? "No phone"} · {transaction.admin}</p>
                     </Td>
-                    <Td className="border-t border-slate-200">
-                      <span className="whitespace-nowrap text-base font-black text-forest">{formatRupiah(transaction.amount)}</span>
-                    </Td>
-                    <Td className="border-t border-slate-200">
-                      {transaction.type === "withdrawal" ? (
-                        <span className="block max-w-[150px] break-words">
-                          <span className="block font-bold text-slate-800">{transaction.withdrawalBankName || "-"}</span>
-                          <span className="block text-xs text-slate-500">{transaction.withdrawalAccountName || "-"}</span>
-                          <span className="block text-xs font-semibold text-forest">{transaction.withdrawalAccountNumber || "-"}</span>
-                        </span>
-                      ) : (
-                        <span className="block max-w-[130px] break-words">{transaction.senderName || "-"}</span>
-                      )}
-                    </Td>
-                    <Td className="border-t border-slate-200">
-                      {transaction.proofDataUrl ? (
-                        <button className="inline-flex items-center gap-1 rounded border border-slate-200 px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-50" onClick={() => onViewDetails(transaction)}>
-                          <Eye size={14} />
-                          View proof
-                        </button>
-                      ) : transaction.proofName ? (
-                        <span className="text-xs font-semibold text-slate-500">{transaction.proofName}</span>
-                      ) : (
-                        <span className="text-xs text-slate-400">No proof</span>
-                      )}
-                    </Td>
-                    <Td className="border-t border-slate-200">
-                      <StatusBadge status={transaction.status} />
-                    </Td>
-                    <Td className="border-t border-slate-200">
-                      <span className="block max-w-[110px] leading-5">{shortDate(transaction.createdAt)}</span>
-                    </Td>
-                    <Td className={`sticky right-0 border-t border-slate-200 shadow-[-10px_0_18px_rgba(15,23,42,0.08)] ${isPending ? "bg-amber-50" : "bg-white"} group-hover:bg-slate-50`}>
+                    {tone === "topup" ? (
+                      <>
+                        <Td className="border-t border-slate-200">
+                          <span className="block max-w-[130px] break-words">{transaction.senderName || "-"}</span>
+                        </Td>
+                        <Td className="border-t border-slate-200">
+                          <span className="whitespace-nowrap text-base font-black text-forest">{formatRupiah(transaction.amount)}</span>
+                        </Td>
+                        <Td className="border-t border-slate-200">
+                          <ProofCell transaction={transaction} onViewDetails={onViewDetails} />
+                        </Td>
+                        <Td className="border-t border-slate-200">
+                          <PaymentMethodCell transaction={transaction} />
+                        </Td>
+                        <Td className="border-t border-slate-200">
+                          <StatusBadge status={transaction.status} />
+                        </Td>
+                      </>
+                    ) : (
+                      <>
+                        <Td className="border-t border-slate-200">
+                          <span className="whitespace-nowrap text-base font-black text-forest">{formatRupiah(transaction.amount)}</span>
+                        </Td>
+                        <Td className="border-t border-slate-200">
+                          <WithdrawalInfoCell transaction={transaction} />
+                        </Td>
+                        <Td className="border-t border-slate-200">
+                          <StatusBadge status={transaction.status} />
+                        </Td>
+                      </>
+                    )}
+                    <Td className={`sticky right-0 border-t border-slate-200 shadow-[-10px_0_18px_rgba(15,23,42,0.08)] ${statusStickyClass(transaction.status)} group-hover:bg-slate-50`}>
                       <div className="grid min-w-[132px] gap-2">
                         <button className="inline-flex items-center justify-center gap-1 rounded border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-50" onClick={() => onViewDetails(transaction)}>
                           <ReceiptText size={14} />
@@ -262,7 +273,7 @@ function RequestTable({
               })
             ) : (
               <tr>
-                <td colSpan={8} className="p-6 text-center text-sm text-slate-500">
+                <td colSpan={colSpan} className="p-6 text-center text-sm text-slate-500">
                   {statusEmptyText}
                 </td>
               </tr>
@@ -271,6 +282,55 @@ function RequestTable({
         </table>
       </div>
     </section>
+  );
+}
+
+function statusRowClass(status: Transaction["status"]) {
+  if (status === "pending") return "bg-amber-50/70";
+  if (status === "approved") return "bg-emerald-50/55";
+  return "bg-rose-50/45";
+}
+
+function statusStickyClass(status: Transaction["status"]) {
+  if (status === "pending") return "bg-amber-50";
+  if (status === "approved") return "bg-emerald-50";
+  return "bg-rose-50";
+}
+
+function ProofCell({ transaction, onViewDetails }: { transaction: Transaction; onViewDetails: (transaction: Transaction) => void }) {
+  if (transaction.proofDataUrl) {
+    return (
+      <button className="inline-flex items-center gap-1 rounded border border-slate-200 px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-50" onClick={() => onViewDetails(transaction)}>
+        <Eye size={14} />
+        View proof
+      </button>
+    );
+  }
+
+  if (transaction.proofName) {
+    return <span className="text-xs font-semibold text-slate-500">{transaction.proofName}</span>;
+  }
+
+  return <span className="text-xs text-slate-400">No proof</span>;
+}
+
+function PaymentMethodCell({ transaction }: { transaction: Transaction }) {
+  return (
+    <span className="block max-w-[260px] whitespace-pre-line leading-5 text-slate-800">
+      {transaction.proofName ? `Proof file: ${transaction.proofName}` : "Pending bank transfer verification"}
+      <span className="block text-xs text-slate-500">Created: {shortDate(transaction.createdAt)}</span>
+    </span>
+  );
+}
+
+function WithdrawalInfoCell({ transaction }: { transaction: Transaction }) {
+  return (
+    <span className="block max-w-[330px] whitespace-pre-line leading-5">
+      Recipient: {transaction.withdrawalAccountName || "-"}
+      {"\n"}Bank: {transaction.withdrawalBankName || "-"}
+      {"\n"}Account No: {transaction.withdrawalAccountNumber || "-"}
+      {"\n"}Created: {shortDate(transaction.createdAt)}
+    </span>
   );
 }
 

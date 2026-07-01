@@ -22,6 +22,10 @@ function App() {
     return () => window.removeEventListener("popstate", onPopState);
   }, []);
 
+  useEffect(() => {
+    document.title = path.startsWith("/admin") ? "Tokopedia Portal" : "Tokopedia";
+  }, [path]);
+
   const navigate: Navigate = (nextPath) => {
     window.history.pushState(null, "", nextPath);
     setPath(window.location.pathname);
